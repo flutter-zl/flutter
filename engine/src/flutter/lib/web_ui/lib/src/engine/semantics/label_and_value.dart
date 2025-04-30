@@ -448,14 +448,29 @@ class LabelAndValue extends SemanticBehavior {
 
   @override
   void update() {
-    final String? computedLabel = _computeLabel();
-
-    if (computedLabel == null) {
+    final String? label = semanticsObject.hasLabel ? semanticsObject.label : null;
+    final String? hint = semanticsObject.hint;
+    final String? value = !semanticsObject.isIncrementable && semanticsObject.hasValue
+        ? semanticsObject.value
+        : null;
+    if (label == null && hint == null && value == null) {
       _cleanUpDom();
       return;
     }
 
-    _getEffectiveRepresentation().update(computedLabel);
+    if (label != null) {
+      owner.setAttribute('aria-label', label);
+    } else {
+      owner.removeAttribute('aria-label');
+    }
+
+    owner.element.updateDescribedBy(
+      nodeId: semanticsObject.id,
+      hint: hint,
+      value: value,
+    );
+
+    _getEffectiveRepresentation().update(label ?? '');
   }
 
   LabelRepresentationBehavior? _representation;
@@ -484,15 +499,11 @@ class LabelAndValue extends SemanticBehavior {
   /// The label is a concatenation of tooltip, label, hint, and value, whichever
   /// combination is present.
   String? _computeLabel() {
-    // If the node is incrementable the value is reported to the browser via
-    // the respective role. We do not need to also render it again here.
-    final bool shouldDisplayValue = !semanticsObject.isIncrementable && semanticsObject.hasValue;
-
     return computeDomSemanticsLabel(
       tooltip: semanticsObject.hasTooltip ? semanticsObject.tooltip : null,
       label: semanticsObject.hasLabel ? semanticsObject.label : null,
-      hint: semanticsObject.hint,
-      value: shouldDisplayValue ? semanticsObject.value : null,
+      hint: null, // Do NOT include hint
+      value: null, // Do NOT include value
     );
   }
 
@@ -504,6 +515,7 @@ class LabelAndValue extends SemanticBehavior {
   void dispose() {
     super.dispose();
     _cleanUpDom();
+    owner.element.removeDescribedBySpans(semanticsObject.id);
   }
 
   /// Moves the focus to the element that carries the semantic label.

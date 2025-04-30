@@ -3135,3 +3135,42 @@ enum EnabledState {
   /// The node is disabled.
   disabled,
 }
+
+extension SemanticsAriaDescribedBy on DomElement {
+  void updateDescribedBy({required int nodeId, String? hint, String? value}) {
+    removeDescribedBySpans(nodeId);
+
+    final List<String> ids = [];
+    if (hint != null && hint.isNotEmpty) {
+      final String hintId = 'flt-semantic-node-$nodeId-hint';
+      final DomElement hintSpan = domDocument.createElement('span')
+        ..id = hintId
+        ..style.display = 'none'
+        ..text = hint;
+      append(hintSpan);
+      ids.add(hintId);
+    }
+
+    if (value != null && value.isNotEmpty) {
+      final String valueId = 'flt-semantic-node-$nodeId-value';
+      final DomElement valueSpan = domDocument.createElement('span')
+        ..id = valueId
+        ..style.display = 'none'
+        ..text = value;
+      append(valueSpan);
+      ids.add(valueId);
+    }
+
+    if (ids.isNotEmpty) {
+      setAttribute('aria-describedby', ids.join(' '));
+    } else {
+      removeAttribute('aria-describedby');
+    }
+  }
+
+  void removeDescribedBySpans(int nodeId) {
+    domDocument.getElementById('flt-semantic-node-$nodeId-hint')?.remove();
+    domDocument.getElementById('flt-semantic-node-$nodeId-value')?.remove();
+  }
+}
+
