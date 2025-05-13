@@ -526,6 +526,14 @@ class LabelAndValue extends SemanticBehavior {
       owner.removeAttribute('aria-valuenow');
       owner.removeAttribute('aria-valuetext');
     }
+
+    // 4. aria-labelledby support
+    if (semanticsObject.labelledByIds != null && semanticsObject.labelledByIds!.isNotEmpty) {
+      final String ids = semanticsObject.labelledByIds!.join(' ');
+      owner.setAttribute('aria-labelledby', ids);
+    } else {
+      owner.removeAttribute('aria-labelledby');
+    }
   }
 
   String? _combineHintAndTooltip() {

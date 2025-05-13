@@ -361,6 +361,12 @@ class SemanticsNodeUpdate {
   /// See [ui.SemanticsUpdateBuilder.updateNode].
   final List<String>? controlsNodes;
 
+  /// IDs of other semantics nodes whose text should be used to label this node.
+  ///
+  /// If not null or empty, this will be used to set `aria-labelledby` on the DOM element.
+  /// Matches the W3C ARIA spec: https://w3c.github.io/aria/#aria-labelledby
+  List<int>? labelledByIds;
+
   /// See [ui.SemanticsUpdateBuilder.updateNode].
   final ui.SemanticsValidationResult validationResult;
 

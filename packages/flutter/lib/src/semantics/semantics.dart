@@ -719,6 +719,7 @@ class SemanticsData with Diagnosticable {
     required this.attributedDecreasedValue,
     required this.attributedHint,
     required this.tooltip,
+    required this.labelledBy,
     required this.textDirection,
     required this.rect,
     required this.elevation,
@@ -1008,6 +1009,11 @@ class SemanticsData with Diagnosticable {
 
   /// {@macro flutter.semantics.SemanticsNode.inputType}
   final SemanticsInputType inputType;
+
+  /// The identifiers of other semantics nodes that label this node.
+  ///
+  /// Used to set the `aria-labelledby` attribute on web.
+  final Set<String>? labelledBy;
 
   /// Whether [flags] contains the given flag.
   bool hasFlag(SemanticsFlag flag) => (flags & flag.index) != 0;
@@ -1300,6 +1306,7 @@ class SemanticsProperties extends DiagnosticableTree {
     this.sortKey,
     this.tagForChildren,
     this.role,
+    this.labelledBy,
     this.controlsNodes,
     this.inputType,
     this.validationResult = SemanticsValidationResult.none,
@@ -1754,6 +1761,24 @@ class SemanticsProperties extends DiagnosticableTree {
   ///    in TalkBack and VoiceOver.
   ///  * [attributedHint] for an [AttributedString] version of this property.
   final String? hint;
+
+  /// The identifiers of other semantics nodes that label this node.
+  ///
+  /// Used to set the `aria-labelledby` attribute on web.
+  ///
+  /// Setting this attribute will override the default label of this node with
+  /// the labels of the nodes whose identifiers are provided in this set.
+  ///
+  /// The value should be a set of [SemanticsNode.identifier] strings referring
+  /// to other nodes that provide the accessible name for this node.
+  ///
+  /// If this is set, [label] and [attributedLabel] will be ignored by assistive
+  /// technologies that support `aria-labelledby`.
+  ///
+  /// See also:
+  ///
+  ///  * [SemanticsNode.identifier], which provides the identifier for semantics nodes.
+  final Set<String>? labelledBy;
 
   /// Provides an [AttributedString] version of brief textual description of the
   /// result of an action performed on the widget.
@@ -2944,6 +2969,12 @@ class SemanticsNode with DiagnosticableTreeMixin {
   String get tooltip => _tooltip;
   String _tooltip = _kEmptyConfig.tooltip;
 
+  /// The identifiers of other semantics nodes that label this node.
+  ///
+  /// Used to set the `aria-labelledby` attribute on web.
+  Set<String>? get labelledBy => _labelledBy;
+  Set<String>? _labelledBy = _kEmptyConfig.labelledBy;
+
   /// The elevation along the z-axis at which the [rect] of this [SemanticsNode]
   /// is located above its parent.
   ///
@@ -3272,6 +3303,7 @@ class SemanticsNode with DiagnosticableTreeMixin {
     AttributedString attributedDecreasedValue = _attributedDecreasedValue;
     AttributedString attributedHint = _attributedHint;
     String tooltip = _tooltip;
+    Set<String>? labelledBy = _labelledBy;
     TextDirection? textDirection = _textDirection;
     Set<SemanticsTag>? mergedTags = tags == null ? null : Set<SemanticsTag>.of(tags!);
     TextSelection? textSelection = _textSelection;
@@ -3399,6 +3431,12 @@ class SemanticsNode with DiagnosticableTreeMixin {
           controlsNodes = <String>{...controlsNodes!, ...node._controlsNodes!};
         }
 
+        if (labelledBy == null) {
+          labelledBy = node._labelledBy;
+        } else if (node._labelledBy != null) {
+          labelledBy = <String>{...labelledBy!, ...node._labelledBy!};
+        }
+
         if (validationResult == SemanticsValidationResult.none) {
           validationResult = node._validationResult;
         } else if (validationResult == SemanticsValidationResult.valid) {
@@ -3424,6 +3462,7 @@ class SemanticsNode with DiagnosticableTreeMixin {
       attributedDecreasedValue: attributedDecreasedValue,
       attributedHint: attributedHint,
       tooltip: tooltip,
+      labelledBy: labelledBy,
       textDirection: textDirection,
       rect: rect,
       transform: transform,
@@ -3706,6 +3745,7 @@ class SemanticsNode with DiagnosticableTreeMixin {
     properties.add(AttributedStringProperty('increasedValue', _attributedIncreasedValue));
     properties.add(AttributedStringProperty('decreasedValue', _attributedDecreasedValue));
     properties.add(AttributedStringProperty('hint', _attributedHint));
+    properties.add(IterableProperty<String>('labelledBy', labelledBy, ifEmpty: null));
     properties.add(StringProperty('tooltip', _tooltip, defaultValue: ''));
     properties.add(
       EnumProperty<TextDirection>('textDirection', _textDirection, defaultValue: null),
@@ -5243,6 +5283,22 @@ class SemanticsConfiguration {
     _hasBeenAnnotated = true;
   }
 
+  /// The identifiers of other semantics nodes that label this node.
+  ///
+  /// Used to set the `aria-labelledby` attribute on web.
+  Set<String>? _labelledBy;
+
+  /// The identifiers of other semantics nodes that label this node.
+  ///
+  /// Setting this value marks this node as annotated.
+  ///
+  /// Used to set the `aria-labelledby` attribute on web.
+  Set<String>? get labelledBy => _labelledBy;
+  set labelledBy(Set<String>? labelledBy) {
+    _labelledBy = labelledBy;
+    _hasBeenAnnotated = true;
+  }
+
   /// A brief description of the result of performing an action on this node in
   /// [AttributedString] format.
   ///
@@ -5906,6 +5962,11 @@ class SemanticsConfiguration {
     );
     if (_tooltip == '') {
       _tooltip = child._tooltip;
+    }
+
+    if (child._labelledBy != null) {
+      _labelledBy ??= <String>{};
+      _labelledBy!.addAll(child._labelledBy!);
     }
 
     _thickness = math.max(_thickness, child._thickness + child._elevation);
