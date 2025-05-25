@@ -2450,7 +2450,9 @@ class EngineSemantics {
     printWarning('[DEBUG] Initializing semantics event handling for the first time');
     _semanticsEventHandlingInitialized = true;
     EnginePlatformDispatcher.instance.onSemanticsEvent = (ui.SemanticsEvent event) {
-      printWarning('[DEBUG] EngineSemantics received SemanticsEvent: ${event.type} for nodeId: ${event.nodeId}');
+      printWarning(
+        '[DEBUG] EngineSemantics received SemanticsEvent: ${event.type} for nodeId: ${event.nodeId}',
+      );
       // Route to all active view semantics owners
       for (final EngineFlutterView view in EnginePlatformDispatcher.instance.views) {
         printWarning('[DEBUG] Routing event to view ${view.viewId}');
@@ -3130,21 +3132,29 @@ AFTER: $description
       return;
     }
 
-    printWarning('[DEBUG] Target element: ${target.element.tagName}, innerText: "${target.element.innerText}"');
+    printWarning(
+      '[DEBUG] Target element: ${target.element.tagName}, innerText: "${target.element.innerText}"',
+    );
     printWarning('[DEBUG] Target has semanticRole: ${target.semanticRole?.runtimeType}');
-    printWarning('[DEBUG] Current activeElement: ${domDocument.activeElement?.tagName}, text: "${domDocument.activeElement?.innerText}"');
+    printWarning(
+      '[DEBUG] Current activeElement: ${domDocument.activeElement?.tagName}, text: "${domDocument.activeElement?.innerText}"',
+    );
 
     // Use existing focus management infrastructure
     if (target.semanticRole != null) {
       printWarning('[DEBUG] Using semanticRole.focusAsRouteDefault()');
       target.semanticRole!.focusAsRouteDefault();
-      printWarning('[DEBUG] After focusAsRouteDefault - activeElement: ${domDocument.activeElement?.tagName}, text: "${domDocument.activeElement?.innerText}"');
+      printWarning(
+        '[DEBUG] After focusAsRouteDefault - activeElement: ${domDocument.activeElement?.tagName}, text: "${domDocument.activeElement?.innerText}"',
+      );
     } else {
       printWarning('[DEBUG] Using direct element focus');
       // Focus the element directly
       target.element.tabIndex = -1;
       target.element.focusWithoutScroll();
-      printWarning('[DEBUG] After direct focus - activeElement: ${domDocument.activeElement?.tagName}, text: "${domDocument.activeElement?.innerText}"');
+      printWarning(
+        '[DEBUG] After direct focus - activeElement: ${domDocument.activeElement?.tagName}, text: "${domDocument.activeElement?.innerText}"',
+      );
     }
 
     printWarning('[DEBUG] Focus event processing completed');

@@ -1226,7 +1226,9 @@ class EnginePlatformDispatcher extends ui.PlatformDispatcher {
   Zone _onSemanticsEventZone = Zone.root;
   @override
   set onSemanticsEvent(ui.SemanticsEventCallback? callback) {
-    printWarning('[DEBUG] Web PlatformDispatcher.onSemanticsEvent setter called - callback: ${callback != null ? 'NOT NULL' : 'NULL'}');
+    printWarning(
+      '[DEBUG] Web PlatformDispatcher.onSemanticsEvent setter called - callback: ${callback != null ? 'NOT NULL' : 'NULL'}',
+    );
     _onSemanticsEvent = callback;
     _onSemanticsEventZone = Zone.current;
   }
@@ -1234,8 +1236,12 @@ class EnginePlatformDispatcher extends ui.PlatformDispatcher {
   /// Engine code should use this method to invoke semantic events.
   /// Otherwise zones won't work properly.
   void invokeOnSemanticsEvent(String type, Map<String, dynamic> data, {int? nodeId}) {
-    printWarning('[DEBUG] Web PlatformDispatcher.invokeOnSemanticsEvent called - Type: $type, NodeId: $nodeId, Data: $data');
-    printWarning('[DEBUG] _onSemanticsEvent callback is: ${_onSemanticsEvent != null ? 'SET' : 'NULL'}');
+    printWarning(
+      '[DEBUG] Web PlatformDispatcher.invokeOnSemanticsEvent called - Type: $type, NodeId: $nodeId, Data: $data',
+    );
+    printWarning(
+      '[DEBUG] _onSemanticsEvent callback is: ${_onSemanticsEvent != null ? 'SET' : 'NULL'}',
+    );
 
     void sendEventToFramework() {
       printWarning('[DEBUG] About to invoke SemanticsEvent callback with type: $type');

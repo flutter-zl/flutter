@@ -578,11 +578,7 @@ class SemanticsActionEvent {
 /// Event data for semantic events sent from framework to engine.
 class SemanticsEvent {
   /// Creates a [SemanticsEvent].
-  const SemanticsEvent({
-    required this.type,
-    required this.data,
-    this.nodeId,
-  });
+  const SemanticsEvent({required this.type, required this.data, this.nodeId});
 
   /// The type of semantic event.
   final String type;
