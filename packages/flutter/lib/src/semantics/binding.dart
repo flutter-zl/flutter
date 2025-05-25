@@ -7,14 +7,14 @@
 /// @docImport 'semantics.dart';
 library;
 
-import 'dart:ui' as ui show AccessibilityFeatures, SemanticsActionEvent, SemanticsUpdateBuilder;
+import 'dart:ui' as ui show AccessibilityFeatures, SemanticsActionEvent, SemanticsEvent, SemanticsUpdateBuilder;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'debug.dart';
 
-export 'dart:ui' show AccessibilityFeatures, SemanticsActionEvent, SemanticsUpdateBuilder;
+export 'dart:ui' show AccessibilityFeatures, SemanticsActionEvent, SemanticsEvent, SemanticsUpdateBuilder;
 
 /// The glue between the semantics layer and the Flutter engine.
 mixin SemanticsBinding on BindingBase {
@@ -23,10 +23,16 @@ mixin SemanticsBinding on BindingBase {
     super.initInstances();
     _instance = this;
     _accessibilityFeatures = platformDispatcher.accessibilityFeatures;
+
+    print('[DEBUG] SemanticsBinding.initInstances - Setting up platform dispatcher callbacks');
     platformDispatcher
       ..onSemanticsEnabledChanged = _handleSemanticsEnabledChanged
       ..onSemanticsActionEvent = _handleSemanticsActionEvent
+      ..onSemanticsEvent = _handleSemanticsEvent
       ..onAccessibilityFeaturesChanged = handleAccessibilityFeaturesChanged;
+
+    print('[DEBUG] SemanticsBinding.initInstances - onSemanticsEvent wired up successfully!');
+
     _handleSemanticsEnabledChanged();
   }
 
@@ -152,6 +158,15 @@ mixin SemanticsBinding on BindingBase {
       }
     }
     performSemanticsAction(decodedAction);
+  }
+
+  void _handleSemanticsEvent(ui.SemanticsEvent event) {
+    print('[DEBUG] SemanticsBinding._handleSemanticsEvent called - Event: ${event.type}, NodeId: ${event.nodeId}');
+
+    // For now, we don't do anything with the event at the framework level
+    // The web engine will handle focus events directly in the web semantics layer
+    // In the future, framework-level handling could be added here if needed
+    print('[DEBUG] SemanticsEvent handled at framework level - Type: ${event.type}');
   }
 
   /// Called whenever the platform requests an action to be performed on a

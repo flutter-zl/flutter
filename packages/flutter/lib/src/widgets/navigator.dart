@@ -2530,8 +2530,7 @@ class Navigator extends StatefulWidget {
     ).restorablePushAndRemoveUntil<T>(newRouteBuilder, predicate, arguments: arguments);
   }
 
-  /// Replaces a route on the navigator that most tightly encloses the given
-  /// context with a new route.
+  /// Replaces a route on the navigator with a new route.
   ///
   /// {@template flutter.widgets.navigator.replace}
   /// The old route must not be currently visible, as this method skips the
@@ -2570,8 +2569,7 @@ class Navigator extends StatefulWidget {
     return Navigator.of(context).replace<T>(oldRoute: oldRoute, newRoute: newRoute);
   }
 
-  /// Replaces a route on the navigator that most tightly encloses the given
-  /// context with a new route.
+  /// Replaces a route on the navigator with a new route.
   ///
   /// {@template flutter.widgets.navigator.restorableReplace}
   /// Unlike [Route]s added via [replace], [Route]s added with this method are
@@ -2598,9 +2596,8 @@ class Navigator extends StatefulWidget {
     );
   }
 
-  /// Replaces a route on the navigator that most tightly encloses the given
-  /// context with a new route. The route to be replaced is the one below the
-  /// given `anchorRoute`.
+  /// Replaces a route on the navigator with a new route. The route to be
+  /// replaced is the one below the given `anchorRoute`.
   ///
   /// {@template flutter.widgets.navigator.replaceRouteBelow}
   /// The old route must not be current visible, as this method skips the
@@ -2636,9 +2633,8 @@ class Navigator extends StatefulWidget {
     return Navigator.of(context).replaceRouteBelow<T>(anchorRoute: anchorRoute, newRoute: newRoute);
   }
 
-  /// Replaces a route on the navigator that most tightly encloses the given
-  /// context with a new route. The route to be replaced is the one below the
-  /// given `anchorRoute`.
+  /// Replaces a route on the navigator with a new route. The route to be
+  /// replaced is the one below the given `anchorRoute`.
   ///
   /// {@template flutter.widgets.navigator.restorableReplaceRouteBelow}
   /// Unlike [Route]s added via [restorableReplaceRouteBelow], [Route]s added
@@ -3693,6 +3689,10 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin, Res
   final FocusNode focusNode = FocusNode(debugLabel: 'Navigator');
 
   bool _debugLocked = false; // used to prevent re-entrant calls to push, pop, and friends
+
+  // Track focus restoration after pop operations for accessibility
+  bool _needsFocusRestorationAfterPop = false;
+  int? _focusNodeToRestoreAfterPop;
 
   HeroController? _heroControllerFromScope;
 
@@ -5093,6 +5093,19 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin, Res
 
       developer.postEvent('Flutter.Navigation', <String, dynamic>{'route': routeJsonable});
     }
+
+    // Send focus restoration semantic event if needed (for web accessibility)
+    if (_needsFocusRestorationAfterPop && _focusNodeToRestoreAfterPop != null) {
+      final int nodeId = _focusNodeToRestoreAfterPop!;
+      _needsFocusRestorationAfterPop = false;
+      _focusNodeToRestoreAfterPop = null;
+
+      // Send semantic event using existing accessibility channel (works for all platforms)
+      SystemChannels.accessibility.send(
+        const FocusSemanticEvent().toMap(nodeId: nodeId),
+      );
+    }
+
     _cancelActivePointers();
   }
 
@@ -5575,6 +5588,21 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin, Res
       _debugLocked = true;
       return true;
     }());
+
+    // Capture focus information for restoration after pop (for accessibility)
+    final _RouteEntry? currentEntry = _lastRouteEntryWhereOrNull(_RouteEntry.isPresentPredicate);
+    if (currentEntry?.lastFocusNode != null) {
+      // Find the route that will become current after this pop
+      final _RouteEntry? futureEntry = _history
+          .where(_RouteEntry.isPresentPredicate)
+          .where((_RouteEntry entry) => entry != currentEntry)
+          .lastOrNull;
+      if (futureEntry != null) {
+        _needsFocusRestorationAfterPop = true;
+        _focusNodeToRestoreAfterPop = currentEntry!.lastFocusNode;
+      }
+    }
+
     final _RouteEntry entry = _history.lastWhere(_RouteEntry.isPresentPredicate);
     if (entry.pageBased && widget.onPopPage != null) {
       if (widget.onPopPage!(entry.route, result)) {

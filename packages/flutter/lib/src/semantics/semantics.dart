@@ -3619,10 +3619,14 @@ class SemanticsNode with DiagnosticableTreeMixin {
   /// Semantics events should be sent to inform interested parties (like
   /// the accessibility system of the operating system) about changes to the UI.
   void sendEvent(SemanticsEvent event) {
+    print('[DEBUG] SemanticsNode.sendEvent called - Event: ${event.type}, NodeId: $id');
     if (!attached) {
+      print('[DEBUG] SemanticsNode not attached, not sending event');
       return;
     }
-    SystemChannels.accessibility.send(event.toMap(nodeId: id));
+    final Map<String, dynamic> eventMap = event.toMap(nodeId: id);
+    print('[DEBUG] Sending event via SystemChannels.accessibility: $eventMap');
+    SystemChannels.accessibility.send(eventMap);
   }
 
   bool _debugIsActionBlocked(SemanticsAction action) {
