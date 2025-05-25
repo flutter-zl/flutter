@@ -49,16 +49,7 @@ typedef SemanticsEventCallback = void Function(SemanticsEvent semanticsEvent);
 /// Event data for semantic events sent from framework to engine.
 class SemanticsEvent {
   /// Creates a [SemanticsEvent].
-  const SemanticsEvent({
-    required this.type,
-    required this.data,
-    this.nodeId,
-  }) {
-    // DEBUG: Print when SemanticsEvent is created
-    if (type == 'focus') {
-      print('[DEBUG] SemanticsEvent created - Type: $type, NodeId: $nodeId, Data: $data');
-    }
-  }
+  const SemanticsEvent({required this.type, required this.data, this.nodeId});
 
   /// The type of semantic event.
   final String type;
@@ -1351,7 +1342,9 @@ class PlatformDispatcher {
   SemanticsEventCallback? _onSemanticsEvent;
   Zone _onSemanticsEventZone = Zone.root;
   set onSemanticsEvent(SemanticsEventCallback? callback) {
-    print('[DEBUG] PlatformDispatcher.onSemanticsEvent setter called - callback: ${callback != null ? 'NOT NULL' : 'NULL'}');
+    print(
+      '[DEBUG] PlatformDispatcher.onSemanticsEvent setter called - callback: ${callback != null ? 'NOT NULL' : 'NULL'}',
+    );
     _onSemanticsEvent = callback;
     _onSemanticsEventZone = Zone.current;
   }
