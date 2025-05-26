@@ -1053,6 +1053,203 @@ void main() {
     final SemanticsNode node = SemanticsNode()..indexInParent = 10;
     expect(node.toString(), contains('indexInParent: 10'));
   });
+
+  group('SemanticsNode.sendEvent', () {
+    testWidgets('SemanticsNode.sendEvent sends FocusSemanticEvent correctly', (WidgetTester tester) async {
+      final List<Map<String, dynamic>> sentMessages = <Map<String, dynamic>>[];
+
+      // Mock the SystemChannels.accessibility to capture sent messages
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.accessibility,
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'routeUpdated') {
+            final Map<String, dynamic> arguments = methodCall.arguments as Map<String, dynamic>;
+            sentMessages.add(arguments);
+          }
+          return null;
+        },
+      );
+
+      // Create a semantics node and attach it to an owner
+      final SemanticsOwner owner = SemanticsOwner(onSemanticsUpdate: (SemanticsUpdate update) {});
+      final SemanticsNode node = SemanticsNode()..attach(owner);
+
+      // Send a FocusSemanticEvent
+      node.sendEvent(const FocusSemanticEvent());
+
+      // Verify the event was sent with the correct node ID
+      expect(sentMessages, hasLength(1));
+      final Map<String, dynamic> event = sentMessages.first;
+      expect(event['type'], equals('focus'));
+      expect(event['nodeId'], equals(node.id));
+      expect(event['data'], equals(<String, dynamic>{}));
+
+      // Clean up
+      node.detach();
+      owner.dispose();
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.accessibility,
+        null,
+      );
+    });
+
+    testWidgets('SemanticsNode.sendEvent sends AnnounceSemanticsEvent correctly', (WidgetTester tester) async {
+      final List<Map<String, dynamic>> sentMessages = <Map<String, dynamic>>[];
+
+      // Mock the SystemChannels.accessibility to capture sent messages
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.accessibility,
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'routeUpdated') {
+            final Map<String, dynamic> arguments = methodCall.arguments as Map<String, dynamic>;
+            sentMessages.add(arguments);
+          }
+          return null;
+        },
+      );
+
+      // Create a semantics node and attach it to an owner
+      final SemanticsOwner owner = SemanticsOwner(onSemanticsUpdate: (SemanticsUpdate update) {});
+      final SemanticsNode node = SemanticsNode()..attach(owner);
+
+      // Send an AnnounceSemanticsEvent
+      const event = AnnounceSemanticsEvent('Hello World', TextDirection.ltr);
+      node.sendEvent(event);
+
+      // Verify the event was sent with the correct data
+      expect(sentMessages, hasLength(1));
+      final Map<String, dynamic> sentEvent = sentMessages.first;
+      expect(sentEvent['type'], equals('announce'));
+      expect(sentEvent['nodeId'], equals(node.id));
+      expect(sentEvent['data']['message'], equals('Hello World'));
+      expect(sentEvent['data']['textDirection'], equals(TextDirection.ltr.index));
+
+      // Clean up
+      node.detach();
+      owner.dispose();
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.accessibility,
+        null,
+      );
+    });
+
+    testWidgets('SemanticsNode.sendEvent does not send when node is not attached', (WidgetTester tester) async {
+      final List<Map<String, dynamic>> sentMessages = <Map<String, dynamic>>[];
+
+      // Mock the SystemChannels.accessibility to capture sent messages
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.accessibility,
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'routeUpdated') {
+            final Map<String, dynamic> arguments = methodCall.arguments as Map<String, dynamic>;
+            sentMessages.add(arguments);
+          }
+          return null;
+        },
+      );
+
+      // Create a semantics node but don't attach it
+      final SemanticsNode node = SemanticsNode();
+
+      // Try to send an event - should not send anything
+      node.sendEvent(const FocusSemanticEvent());
+
+      // Verify no event was sent
+      expect(sentMessages, isEmpty);
+
+      // Clean up
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.accessibility,
+        null,
+      );
+    });
+
+    testWidgets('SemanticsNode.sendEvent sends custom SemanticsEvent correctly', (WidgetTester tester) async {
+      final List<Map<String, dynamic>> sentMessages = <Map<String, dynamic>>[];
+
+      // Mock the SystemChannels.accessibility to capture sent messages
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.accessibility,
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'routeUpdated') {
+            final Map<String, dynamic> arguments = methodCall.arguments as Map<String, dynamic>;
+            sentMessages.add(arguments);
+          }
+          return null;
+        },
+      );
+
+      // Create a semantics node and attach it to an owner
+      final SemanticsOwner owner = SemanticsOwner(onSemanticsUpdate: (SemanticsUpdate update) {});
+      final SemanticsNode node = SemanticsNode()..attach(owner);
+
+      // Send a custom SemanticsEvent
+      final customEvent = TestSemanticsEvent(text: 'test', number: 42);
+      node.sendEvent(customEvent);
+
+      // Verify the event was sent with the correct data
+      expect(sentMessages, hasLength(1));
+      final Map<String, dynamic> sentEvent = sentMessages.first;
+      expect(sentEvent['type'], equals('TestEvent'));
+      expect(sentEvent['nodeId'], equals(node.id));
+      expect(sentEvent['data']['text'], equals('test'));
+      expect(sentEvent['data']['number'], equals(42));
+
+      // Clean up
+      node.detach();
+      owner.dispose();
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.accessibility,
+        null,
+      );
+    });
+
+    testWidgets('SemanticsNode.sendEvent handles multiple events sequentially', (WidgetTester tester) async {
+      final List<Map<String, dynamic>> sentMessages = <Map<String, dynamic>>[];
+
+      // Mock the SystemChannels.accessibility to capture sent messages
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.accessibility,
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'routeUpdated') {
+            final Map<String, dynamic> arguments = methodCall.arguments as Map<String, dynamic>;
+            sentMessages.add(arguments);
+          }
+          return null;
+        },
+      );
+
+      // Create a semantics node and attach it to an owner
+      final SemanticsOwner owner = SemanticsOwner(onSemanticsUpdate: (SemanticsUpdate update) {});
+      final SemanticsNode node = SemanticsNode()..attach(owner);
+
+      // Send multiple events
+      node.sendEvent(const FocusSemanticEvent());
+      node.sendEvent(const AnnounceSemanticsEvent('Hello', TextDirection.ltr));
+      node.sendEvent(const TapSemanticEvent());
+
+      // Verify all events were sent
+      expect(sentMessages, hasLength(3));
+
+      expect(sentMessages[0]['type'], equals('focus'));
+      expect(sentMessages[0]['nodeId'], equals(node.id));
+
+      expect(sentMessages[1]['type'], equals('announce'));
+      expect(sentMessages[1]['nodeId'], equals(node.id));
+      expect(sentMessages[1]['data']['message'], equals('Hello'));
+
+      expect(sentMessages[2]['type'], equals('tap'));
+      expect(sentMessages[2]['nodeId'], equals(node.id));
+
+      // Clean up
+      node.detach();
+      owner.dispose();
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.accessibility,
+        null,
+      );
+    });
+  });
 }
 
 class TestRender extends RenderProxyBox {
@@ -1103,4 +1300,23 @@ class TestRender extends RenderProxyBox {
 
 class CustomSortKey extends OrdinalSortKey {
   const CustomSortKey(super.order, {super.name});
+}
+
+class TestSemanticsEvent extends SemanticsEvent {
+  TestSemanticsEvent({this.text, this.number}) : super('TestEvent');
+
+  final String? text;
+  final int? number;
+
+  @override
+  Map<String, dynamic> getDataMap() {
+    final Map<String, dynamic> result = <String, dynamic>{};
+    if (text != null) {
+      result['text'] = text;
+    }
+    if (number != null) {
+      result['number'] = number;
+    }
+    return result;
+  }
 }
