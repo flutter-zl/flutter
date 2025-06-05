@@ -20,6 +20,11 @@ export 'rendering.dart' show TextSelectionHandleType;
 export 'src/widgets/actions.dart';
 export 'src/widgets/adapter.dart';
 export 'src/widgets/animated_cross_fade.dart';
+export 'src/widgets/animated_primary_scroll_controller.dart';
+export 'src/widgets/animated_scroll_action.dart';
+export 'src/widgets/animated_scroll_activity.dart';
+export 'src/widgets/animated_scroll_controller.dart';
+export 'src/widgets/animated_scroll_position.dart';
 export 'src/widgets/animated_scroll_view.dart';
 export 'src/widgets/animated_size.dart';
 export 'src/widgets/animated_switcher.dart';
@@ -38,11 +43,13 @@ export 'src/widgets/color_filter.dart';
 export 'src/widgets/container.dart';
 export 'src/widgets/context_menu_button_item.dart';
 export 'src/widgets/context_menu_controller.dart';
+export 'src/widgets/cubic_bezier.dart';
 export 'src/widgets/debug.dart';
 export 'src/widgets/decorated_sliver.dart';
 export 'src/widgets/default_selection_style.dart';
 export 'src/widgets/default_text_editing_shortcuts.dart';
 export 'src/widgets/desktop_text_selection_toolbar_layout_delegate.dart';
+export 'src/widgets/differentiable_curves.dart';
 export 'src/widgets/dismissible.dart';
 export 'src/widgets/display_feature_sub_screen.dart';
 export 'src/widgets/disposable_build_context.dart';
@@ -104,10 +111,8 @@ export 'src/widgets/platform_view.dart';
 export 'src/widgets/pop_scope.dart';
 export 'src/widgets/preferred_size.dart';
 export 'src/widgets/primary_scroll_controller.dart';
-export 'src/widgets/radio_group.dart';
 export 'src/widgets/raw_keyboard_listener.dart';
 export 'src/widgets/raw_menu_anchor.dart';
-export 'src/widgets/raw_radio.dart';
 export 'src/widgets/reorderable_list.dart';
 export 'src/widgets/restoration.dart';
 export 'src/widgets/restoration_properties.dart';
@@ -115,6 +120,7 @@ export 'src/widgets/router.dart';
 export 'src/widgets/routes.dart';
 export 'src/widgets/safe_area.dart';
 export 'src/widgets/scroll_activity.dart';
+export 'src/widgets/scroll_animation.dart';
 export 'src/widgets/scroll_aware_image_provider.dart';
 export 'src/widgets/scroll_configuration.dart';
 export 'src/widgets/scroll_context.dart';
@@ -123,6 +129,7 @@ export 'src/widgets/scroll_delegate.dart';
 export 'src/widgets/scroll_metrics.dart';
 export 'src/widgets/scroll_notification.dart';
 export 'src/widgets/scroll_notification_observer.dart';
+export 'src/widgets/scroll_offset_animation_curve.dart';
 export 'src/widgets/scroll_physics.dart';
 export 'src/widgets/scroll_position.dart';
 export 'src/widgets/scroll_position_with_single_context.dart';
@@ -134,7 +141,6 @@ export 'src/widgets/scrollbar.dart';
 export 'src/widgets/selectable_region.dart';
 export 'src/widgets/selection_container.dart';
 export 'src/widgets/semantics_debugger.dart';
-export 'src/widgets/sensitive_content.dart';
 export 'src/widgets/service_extensions.dart';
 export 'src/widgets/shared_app_data.dart';
 export 'src/widgets/shortcuts.dart';
@@ -149,6 +155,8 @@ export 'src/widgets/sliver_prototype_extent_list.dart';
 export 'src/widgets/sliver_resizing_header.dart';
 export 'src/widgets/sliver_tree.dart';
 export 'src/widgets/slotted_render_object_widget.dart';
+export 'src/widgets/smooth_curves.dart';
+export 'src/widgets/smooth_duration.dart';
 export 'src/widgets/snapshot_widget.dart';
 export 'src/widgets/spacer.dart';
 export 'src/widgets/spell_check.dart';
@@ -177,6 +185,37 @@ export 'src/widgets/view.dart';
 export 'src/widgets/viewport.dart';
 export 'src/widgets/visibility.dart';
 export 'src/widgets/widget_inspector.dart';
+export 'src/widgets/widget_preview.dart';
 export 'src/widgets/widget_span.dart';
 export 'src/widgets/widget_state.dart';
 export 'src/widgets/will_pop_scope.dart';
+// export 'src/widgets/scroll_animation.dart';
+// export 'src/widgets/utils/differentiable_curves.dart';
+// export 'src/widgets/scroll_animation.dart';
+// export 'src/widgets/utils/differentiable_curves.dart';
+// export 'src/widgets/scroll_animation.dart';
+
+// /// A Flutter package that provides smooth, animated scrolling for mouse wheels,
+// /// trackpads, keyboards and programmatic scrolls.
+// library;
+
+// export 'package:scroll_animator/src/animated_primary_scroll_controller.dart'
+//     show AnimatedPrimaryScrollController;
+// export 'package:scroll_animator/src/animated_scroll_action.dart'
+//     show AnimatedScrollAction;
+// export 'package:scroll_animator/src/animated_scroll_activity.dart'
+//     show AnimatedScrollActivity;
+// export 'package:scroll_animator/src/animated_scroll_controller.dart'
+//     show AnimatedScrollController;
+// export 'package:scroll_animator/src/animated_scroll_position.dart'
+//     show AnimatedScrollPosition;
+// export 'package:scroll_animator/src/extensions/scrollable.dart'
+//     show AnimatedScrollable;
+// export 'package:scroll_animator/src/scroll_animation.dart'
+//     show
+//         ChromiumEaseInOut,
+//         ChromiumImpulse,
+//         ScrollAnimation,
+//         ScrollAnimationFactory;
+// export 'package:scroll_animator/src/utils/differentiable_curves.dart'
+//     show DifferentiableCubic, DifferentiableCurve, DifferentiableCurves;

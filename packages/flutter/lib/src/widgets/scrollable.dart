@@ -615,6 +615,8 @@ class ScrollableState extends State<Scrollable>
 
   // Only call this from places that will definitely trigger a rebuild.
   void _updatePosition() {
+    print('>>> ScrollableState _updatePosition START'); // ADD THIS
+
     _configuration = widget.scrollBehavior ?? ScrollConfiguration.of(context);
     final ScrollPhysics? physicsFromWidget =
         widget.physics ?? widget.scrollBehavior?.getScrollPhysics(context);
@@ -628,11 +630,24 @@ class ScrollableState extends State<Scrollable>
       // viewport has had a chance to unregister its listeners from the old
       // position. So, schedule a microtask to do it.
       scheduleMicrotask(oldPosition.dispose);
+       print('>>> ScrollableState _updatePosition: Detached and scheduled disposal of old position'); // ADD THIS
     }
 
+    // --- BEGIN ADDED LOGS ---
+    print('>>> ScrollableState: notificationContext = ${context.toString()}');
+    print('>>> ScrollableState: BEFORE calling controller.createScrollPosition');
+    // --- END ADDED LOGS ---
+
     _position = _effectiveScrollController.createScrollPosition(_physics!, this, oldPosition);
+
+    // --- BEGIN ADDED LOGS ---
+    print('>>> ScrollableState: AFTER calling controller.createScrollPosition, new position = $_position');
+    // --- END ADDED LOGS ---
+
     assert(_position != null);
     _effectiveScrollController.attach(position);
+
+    print('>>> ScrollableState _updatePosition END'); // ADD THIS
   }
 
   @protected
@@ -1749,7 +1764,7 @@ class _RenderScrollSemantics extends RenderProxyBox {
       if (child.isTagged(RenderViewport.excludeFromScrolling)) {
         excluded.add(child);
       } else {
-        if (!child.flagsCollection.isHidden) {
+        if (!child.hasFlag(SemanticsFlag.isHidden)) {
           firstVisibleIndex ??= child.indexInParent;
         }
         included.add(child);

@@ -20,8 +20,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'arc.dart';
-import 'button_style.dart';
 import 'colors.dart';
+import 'floating_action_button.dart';
 import 'icon_button.dart';
 import 'icons.dart';
 import 'material_localizations.dart';
@@ -842,6 +842,20 @@ class MaterialScrollBehavior extends ScrollBehavior {
   const MaterialScrollBehavior();
 
   @override
+  ScrollAnimationFactory? get pointerAxisScrollAnimationFactory {
+    print('in pointerAxisScrollAnimationFactory 0416');
+    // Provide the factory for web and desktop platforms
+    if (kIsWeb) { // Or use defaultTargetPlatform checks for desktop OS
+      print('in kIsWeb 0416');
+      return const ChromiumEaseInOut(); // Replace with your actual factory
+    }
+    // Otherwise, use the default (null)
+    print('in not kIsWeb 0416');
+    return super.pointerAxisScrollAnimationFactory;
+  }
+
+
+  @override
   TargetPlatform getPlatform(BuildContext context) => Theme.of(context).platform;
 
   @override
@@ -903,6 +917,9 @@ class MaterialScrollBehavior extends ScrollBehavior {
 }
 
 class _MaterialAppState extends State<MaterialApp> {
+  static const double _moveExitWidgetSelectionIconSize = 32;
+  static const double _moveExitWidgetSelectionTargetSize = 40;
+
   late HeroController _heroController;
 
   bool get _usesRouter => widget.routerDelegate != null || widget.routerConfig != null;
@@ -935,47 +952,52 @@ class _MaterialAppState extends State<MaterialApp> {
   Widget _exitWidgetSelectionButtonBuilder(
     BuildContext context, {
     required VoidCallback onPressed,
-    required String semanticsLabel,
     required GlobalKey key,
   }) {
-    return _MaterialInspectorButton.filled(
+    return FloatingActionButton(
+      key: key,
       onPressed: onPressed,
-      semanticsLabel: semanticsLabel,
-      icon: Icons.close,
-      isDarkTheme: _isDarkTheme(context),
-      buttonKey: key,
+      mini: true,
+      backgroundColor: _widgetSelectionButtonsBackgroundColor(context),
+      foregroundColor: _widgetSelectionButtonsForegroundColor(context),
+      child: const Icon(Icons.close, semanticLabel: 'Exit Select Widget mode.'),
     );
   }
 
   Widget _moveExitWidgetSelectionButtonBuilder(
     BuildContext context, {
     required VoidCallback onPressed,
-    required String semanticsLabel,
-    bool usesDefaultAlignment = true,
+    bool isLeftAligned = true,
   }) {
-    return _MaterialInspectorButton.iconOnly(
+    return IconButton(
+      color: _widgetSelectionButtonsBackgroundColor(context),
+      padding: EdgeInsets.zero,
+      iconSize: _moveExitWidgetSelectionIconSize,
       onPressed: onPressed,
-      semanticsLabel: semanticsLabel,
-      icon: usesDefaultAlignment ? Icons.arrow_right : Icons.arrow_left,
-      isDarkTheme: _isDarkTheme(context),
+      constraints: const BoxConstraints(
+        minWidth: _moveExitWidgetSelectionTargetSize,
+        minHeight: _moveExitWidgetSelectionTargetSize,
+      ),
+      icon: Icon(
+        isLeftAligned ? Icons.arrow_right : Icons.arrow_left,
+        semanticLabel:
+            'Move "Exit Select Widget mode" button to the ${isLeftAligned ? 'right' : 'left'}.',
+      ),
     );
   }
 
-  Widget _tapBehaviorButtonBuilder(
-    BuildContext context, {
-    required VoidCallback onPressed,
-    required String semanticsLabel,
-    required bool selectionOnTapEnabled,
-  }) {
-    return _MaterialInspectorButton.toggle(
-      onPressed: onPressed,
-      semanticsLabel: semanticsLabel,
-      // This unicode icon is also used for the Cupertino-styled button and for
-      // DevTools. It should be updated in all 3 places if changed.
-      icon: const IconData(0x1F74A),
-      isDarkTheme: _isDarkTheme(context),
-      toggledOn: selectionOnTapEnabled,
-    );
+  Color _widgetSelectionButtonsForegroundColor(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return _isDarkTheme(context)
+        ? theme.colorScheme.onPrimaryContainer
+        : theme.colorScheme.primaryContainer;
+  }
+
+  Color _widgetSelectionButtonsBackgroundColor(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return _isDarkTheme(context)
+        ? theme.colorScheme.primaryContainer
+        : theme.colorScheme.onPrimaryContainer;
   }
 
   bool _isDarkTheme(BuildContext context) {
@@ -1092,7 +1114,6 @@ class _MaterialAppState extends State<MaterialApp> {
         debugShowCheckedModeBanner: widget.debugShowCheckedModeBanner,
         exitWidgetSelectionButtonBuilder: _exitWidgetSelectionButtonBuilder,
         moveExitWidgetSelectionButtonBuilder: _moveExitWidgetSelectionButtonBuilder,
-        tapBehaviorButtonBuilder: _tapBehaviorButtonBuilder,
         shortcuts: widget.shortcuts,
         actions: widget.actions,
         restorationScopeId: widget.restorationScopeId,
@@ -1128,7 +1149,6 @@ class _MaterialAppState extends State<MaterialApp> {
       debugShowCheckedModeBanner: widget.debugShowCheckedModeBanner,
       exitWidgetSelectionButtonBuilder: _exitWidgetSelectionButtonBuilder,
       moveExitWidgetSelectionButtonBuilder: _moveExitWidgetSelectionButtonBuilder,
-      tapBehaviorButtonBuilder: _tapBehaviorButtonBuilder,
       shortcuts: widget.shortcuts,
       actions: widget.actions,
       restorationScopeId: widget.restorationScopeId,
@@ -1165,110 +1185,5 @@ class _MaterialAppState extends State<MaterialApp> {
       behavior: widget.scrollBehavior ?? const MaterialScrollBehavior(),
       child: HeroControllerScope(controller: _heroController, child: result),
     );
-  }
-}
-
-class _MaterialInspectorButton extends InspectorButton {
-  const _MaterialInspectorButton.filled({
-    required super.onPressed,
-    required super.semanticsLabel,
-    required super.icon,
-    required this.isDarkTheme,
-    super.buttonKey,
-  }) : super.filled();
-
-  const _MaterialInspectorButton.toggle({
-    required super.onPressed,
-    required super.semanticsLabel,
-    required super.icon,
-    required this.isDarkTheme,
-    super.toggledOn,
-  }) : super.toggle();
-
-  const _MaterialInspectorButton.iconOnly({
-    required super.onPressed,
-    required super.semanticsLabel,
-    required super.icon,
-    required this.isDarkTheme,
-  }) : super.iconOnly();
-
-  final bool isDarkTheme;
-
-  static const EdgeInsets _buttonPadding = EdgeInsets.zero;
-  static const BoxConstraints _buttonConstraints = BoxConstraints.tightFor(
-    width: InspectorButton.buttonSize,
-    height: InspectorButton.buttonSize,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      key: buttonKey,
-      onPressed: onPressed,
-      iconSize: iconSizeForVariant,
-      padding: _buttonPadding,
-      constraints: _buttonConstraints,
-      style: _selectionButtonsIconStyle(context),
-      icon: Icon(icon, semanticLabel: semanticsLabel),
-    );
-  }
-
-  ButtonStyle _selectionButtonsIconStyle(BuildContext context) {
-    final Color foreground = foregroundColor(context);
-    final Color background = backgroundColor(context);
-
-    return IconButton.styleFrom(
-      foregroundColor: foreground,
-      backgroundColor: background,
-      side: _borderSide(color: foreground),
-      tapTargetSize: MaterialTapTargetSize.padded,
-    );
-  }
-
-  BorderSide? _borderSide({required Color color}) {
-    switch (variant) {
-      case InspectorButtonVariant.filled:
-      case InspectorButtonVariant.iconOnly:
-        return null;
-      case InspectorButtonVariant.toggle:
-        return toggledOn == false ? BorderSide(color: color) : null;
-    }
-  }
-
-  @override
-  Color foregroundColor(BuildContext context) {
-    final Color primaryColor = _primaryColor(context);
-    final Color secondaryColor = _secondaryColor(context);
-    switch (variant) {
-      case InspectorButtonVariant.filled:
-        return primaryColor;
-      case InspectorButtonVariant.iconOnly:
-        return secondaryColor;
-      case InspectorButtonVariant.toggle:
-        return !toggledOn! ? secondaryColor : primaryColor;
-    }
-  }
-
-  @override
-  Color backgroundColor(BuildContext context) {
-    final Color secondaryColor = _secondaryColor(context);
-    switch (variant) {
-      case InspectorButtonVariant.filled:
-        return secondaryColor;
-      case InspectorButtonVariant.iconOnly:
-        return Colors.transparent;
-      case InspectorButtonVariant.toggle:
-        return !toggledOn! ? Colors.transparent : secondaryColor;
-    }
-  }
-
-  Color _primaryColor(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return isDarkTheme ? theme.colorScheme.onPrimaryContainer : theme.colorScheme.primaryContainer;
-  }
-
-  Color _secondaryColor(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return isDarkTheme ? theme.colorScheme.primaryContainer : theme.colorScheme.onPrimaryContainer;
   }
 }

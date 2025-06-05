@@ -14,6 +14,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
+import 'package:flutter/src/widgets/scroll_animation.dart';
 
 import 'framework.dart';
 import 'overscroll_indicator.dart';
@@ -234,6 +235,12 @@ class ScrollBehavior {
   static const ScrollPhysics _clampingPhysics = ClampingScrollPhysics(
     parent: RangeMaintainingScrollPhysics(),
   );
+  /// The [ScrollAnimationFactory] to use for pointer axis initiated scrolls
+  /// (e.g., mouse wheel, trackpad scrolling).
+  /// Returns null if pointer axis scrolling should not be animated.
+  // Provide a concrete implementation returning null by default.
+  // Subclasses can override this to provide an actual factory.
+  ScrollAnimationFactory? get pointerAxisScrollAnimationFactory => null;
 
   /// The scroll physics to use for the platform given by [getPlatform].
   ///
@@ -388,6 +395,11 @@ class _WrappedScrollBehavior implements ScrollBehavior {
 
   @override
   String toString() => objectRuntimeType(this, '_WrappedScrollBehavior');
+
+@override
+ ScrollAnimationFactory? get pointerAxisScrollAnimationFactory =>
+      // Delegate to the wrapped delegate behavior.
+      delegate.pointerAxisScrollAnimationFactory;
 }
 
 /// Controls how [Scrollable] widgets behave in a subtree.

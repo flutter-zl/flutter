@@ -19,6 +19,10 @@ library;
 import 'package:flutter/animation.dart';
 import 'package:flutter/foundation.dart';
 
+import 'animated_scroll_position.dart';
+import 'framework.dart';
+import 'scroll_animation.dart';
+import 'scroll_configuration.dart';
 import 'scroll_context.dart';
 import 'scroll_physics.dart';
 import 'scroll_position.dart';
@@ -290,11 +294,45 @@ class ScrollController extends ChangeNotifier {
   ///    This is used when the environment has changed and the [Scrollable]
   ///    needs to recreate the [ScrollPosition] object. It is null the first
   ///    time the [ScrollPosition] is created.
-  ScrollPosition createScrollPosition(
-    ScrollPhysics physics,
-    ScrollContext context,
-    ScrollPosition? oldPosition,
-  ) {
+ScrollPosition createScrollPosition(
+  ScrollPhysics physics,
+  ScrollContext context,
+  ScrollPosition? oldPosition,
+) {
+  // Determine the effective ScrollBehavior via ScrollConfiguration.
+final BuildContext? configurationContext = context.notificationContext; // Use the correct getter
+  print('in configurationContext 0416 00 $configurationContext');
+
+  // Default behavior if context is somehow null.
+  ScrollBehavior behavior = const ScrollBehavior();
+  if (configurationContext != null) {
+    // Get the effective ScrollBehavior using the correct context.
+    behavior = ScrollConfiguration.of(configurationContext); // Pass the BuildContext
+      print('in behavior 0416 00 $behavior');
+
+  }  // Attempt to get the factory specifically for pointer axis scrolling.
+  final ScrollAnimationFactory? factory = behavior.pointerAxisScrollAnimationFactory;
+  print('in createScrollPosition 0416 00 $factory');
+  // If a factory is provided by the ScrollBehavior...
+  if (factory != null) {
+      print('in createScrollPosition 0416 01');
+    // ...then create an AnimatedScrollPosition to handle smooth pointer scrolling.
+    // This integrates the animated behavior into the default ScrollController
+    // when the configuration indicates it's desired (typically on web/desktop).
+    return AnimatedScrollPosition(
+      physics: physics,
+      context: context,
+      initialPixels: initialScrollOffset,
+      keepScrollOffset: keepScrollOffset,
+      oldPosition: oldPosition,
+      debugLabel: debugLabel,
+      animationFactory: factory, // Pass the factory to the position
+    );
+  } else {
+          print('in createScrollPosition 0416 02');
+
+    // Otherwise (no factory provided, e.g., on mobile platforms by default,
+    // or if explicitly configured without one), use the standard non-animated position.
     return ScrollPositionWithSingleContext(
       physics: physics,
       context: context,
@@ -304,6 +342,7 @@ class ScrollController extends ChangeNotifier {
       debugLabel: debugLabel,
     );
   }
+}
 
   @override
   String toString() {
