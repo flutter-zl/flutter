@@ -19,6 +19,9 @@ library;
 import 'package:flutter/animation.dart';
 import 'package:flutter/foundation.dart';
 
+import 'animated_scroll_position.dart';
+import 'curves.dart';
+import 'scroll_animation.dart';
 import 'scroll_context.dart';
 import 'scroll_physics.dart';
 import 'scroll_position.dart';
@@ -81,7 +84,16 @@ class ScrollController extends ChangeNotifier {
     if (kFlutterMemoryAllocationsEnabled) {
       ChangeNotifier.maybeDispatchObjectCreation(this);
     }
+
+    // One-time platform detection debug print
+    if (kDebugMode && !_platformDetectionLogged) {
+      _platformDetectionLogged = true;
+      print('🔍 Platform Detection: kIsWeb = $kIsWeb');
+      print('   ${kIsWeb ? "✅ Web platform detected - smooth scrolling enabled" : "📱 Non-web platform detected - standard scrolling"}');
+    }
   }
+
+  static bool _platformDetectionLogged = false;
 
   /// The initial value to use for [offset].
   ///
@@ -207,11 +219,41 @@ class ScrollController extends ChangeNotifier {
   /// When calling [animateTo] in widget tests, `await`ing the returned
   /// [Future] may cause the test to hang and timeout. Instead, use
   /// [WidgetTester.pumpAndSettle].
-  Future<void> animateTo(double offset, {required Duration duration, required Curve curve}) async {
+  Future<void> animateTo(
+    double offset, {
+    Duration? duration,
+    Curve? curve
+  }) async {
     assert(_positions.isNotEmpty, 'ScrollController not attached to any scroll views.');
+
+    // Platform-aware animation behavior on web
+    if (kIsWeb && duration == null && curve == null) {
+      // Use smooth animated scrolling on web when no explicit duration/curve provided
+      if (kDebugMode) {
+        print('🌐 ScrollController.animateTo: Using smooth web animation to offset $offset');
+      }
+      await Future.wait<void>(<Future<void>>[
+        for (int i = 0; i < _positions.length; i += 1)
+          _positions[i].animateTo(
+            offset,
+            duration: const Duration(microseconds: 1),
+            curve: const ScrollAnimatorCurve(type: ScrollType.programmatic),
+          ),
+      ]);
+      return;
+    }
+
+    // Standard behavior: require both duration and curve
+    assert(duration != null && curve != null,
+      'Either both duration and curve must be provided, or neither (web only).');
+
+    if (kDebugMode) {
+      print('📱 ScrollController.animateTo: Using standard animation to offset $offset with duration ${duration!.inMilliseconds}ms');
+    }
+
     await Future.wait<void>(<Future<void>>[
       for (int i = 0; i < _positions.length; i += 1)
-        _positions[i].animateTo(offset, duration: duration, curve: curve),
+        _positions[i].animateTo(offset, duration: duration!, curve: curve!),
     ]);
   }
 
@@ -295,6 +337,27 @@ class ScrollController extends ChangeNotifier {
     ScrollContext context,
     ScrollPosition? oldPosition,
   ) {
+    // Platform-aware scroll position creation
+    if (kIsWeb) {
+      // Automatically provide smooth scrolling on web
+      if (kDebugMode) {
+        print('🌐 ScrollController: Creating AnimatedScrollPosition for web platform with ChromiumEaseInOut');
+      }
+      return AnimatedScrollPosition(
+        animationFactory: const ChromiumEaseInOut(),
+        physics: physics,
+        context: context,
+        initialPixels: initialScrollOffset,
+        keepScrollOffset: keepScrollOffset,
+        oldPosition: oldPosition,
+        debugLabel: debugLabel,
+      );
+    }
+
+    // Standard behavior on other platforms
+    if (kDebugMode) {
+      print('📱 ScrollController: Creating standard ScrollPositionWithSingleContext for non-web platform');
+    }
     return ScrollPositionWithSingleContext(
       physics: physics,
       context: context,
