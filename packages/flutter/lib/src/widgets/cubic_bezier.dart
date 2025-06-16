@@ -58,12 +58,21 @@ class CubicBezier {
     final double p2y,
   ) {
     if (kDebugMode) {
-      print('🎨 CubicBezier: Created with control points p1=($p1x, $p1y), p2=($p2x, $p2y)');
+      print('🎨 [CubicBezier] Constructor called:');
+      print('   📍 Control point 1: ($p1x, $p1y)');
+      print('   📍 Control point 2: ($p2x, $p2y)');
+      print('   🔧 Initializing coefficients, gradients, range, and spline...');
     }
     _InitCoefficients(p1x, p1y, p2x, p2y);
     _InitGradients(p1x, p1y, p2x, p2y);
     _InitRange(p1y, p2y);
     _InitSpline();
+    if (kDebugMode) {
+      print('✅ [CubicBezier] Initialization complete');
+      print('   📊 Range: min=${_range_min_}, max=${_range_max_}');
+      print('   🧭 Gradients: start=${_start_gradient_}, end=${_end_gradient_}');
+      print('   📈 Monotonically increasing: $_monotonically_increasing_');
+    }
   }
 
   late final double _ax_;
@@ -170,8 +179,8 @@ class CubicBezier {
   // Evaluates y at the given x with default epsilon.
   double Solve(final double x) {
     final double result = SolveWithEpsilon(x, kBezierEpsilon);
-    if (kDebugMode && x % 0.5 == 0) {
-      print('🎨 CubicBezier.Solve: x=$x -> y=$result');
+    if (kDebugMode && x % 0.25 == 0) { // Log at key points to avoid spam
+      print('🎨 [CubicBezier.Solve] x=${x.toStringAsFixed(2)} → y=${result.toStringAsFixed(4)}');
     }
     return result;
   }
