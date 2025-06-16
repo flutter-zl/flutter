@@ -582,29 +582,40 @@ class DragScrollActivity extends ScrollActivity {
 ///    a given animation, without resetting to a ballistic simulation
 ///    when scroll metrics change.
 class BallisticScrollActivity extends ScrollActivity {
-  /// Creates an activity that sets into motion a scroll view.
-  ///
-  /// The simulation should typically be the result
-  /// of [ScrollPhysics.createBallisticSimulation]
-  /// for the scroll physics of the scroll view.
+  /// Creates an activity that animates a scroll view based on a [physics]
+  /// simulation.
   BallisticScrollActivity(
     super.delegate,
     Simulation simulation,
     TickerProvider vsync,
     this.shouldIgnorePointer,
   ) {
-    _controller =
-        AnimationController.unbounded(
-            debugLabel: kDebugMode ? objectRuntimeType(this, 'BallisticScrollActivity') : null,
-            vsync: vsync,
-          )
-          ..addListener(_tick)
-          ..animateWith(
-            simulation,
-          ).whenComplete(_end); // won't trigger if we dispose _controller before it completes.
+    if (kDebugMode) {
+      print('⚡ [BallisticScrollActivity] Constructor:');
+      print('   🔬 Simulation: ${simulation.runtimeType}');
+      print('   📊 Simulation tolerance: ${simulation.tolerance}');
+      print('   🎭 Vsync: ${vsync.runtimeType}');
+      print('   🚀 Starting animation...');
+    }
+
+    _controller = AnimationController.unbounded(
+      debugLabel: kDebugMode ? '$BallisticScrollActivity' : null,
+      vsync: vsync,
+    )
+    ..addListener(_tick)
+    ..animateWith(simulation).whenComplete(_end);
   }
 
   late AnimationController _controller;
+
+  @override
+  double get velocity => _controller.velocity;
+
+  @override
+  final bool shouldIgnorePointer;
+
+  @override
+  bool get isScrolling => true;
 
   @override
   void resetActivity() {
@@ -617,6 +628,18 @@ class BallisticScrollActivity extends ScrollActivity {
   }
 
   void _tick() {
+    if (kDebugMode && _controller.lastElapsedDuration != null) {
+      final elapsedMs = _controller.lastElapsedDuration!.inMilliseconds;
+      if (elapsedMs % 100 == 0 || _controller.isCompleted) { // Print every 100ms or when completed
+        print('⚡ [BallisticScrollActivity._tick] Physics update:');
+        print('   ⏱️ Elapsed: ${elapsedMs}ms');
+        print('   📍 Controller value: ${_controller.value.toStringAsFixed(2)}');
+        print('   💨 Velocity: ${_controller.velocity.toStringAsFixed(2)}');
+        print('   ✅ Is completed: ${_controller.isCompleted}');
+        print('   📍 Setting pixels to: ${_controller.value}');
+      }
+    }
+
     if (!applyMoveTo(_controller.value)) {
       delegate.goIdle();
     }
@@ -635,11 +658,7 @@ class BallisticScrollActivity extends ScrollActivity {
   }
 
   void _end() {
-    // Check if the activity was disposed before going ballistic because _end might be called
-    // if _controller is disposed just after completion.
-    if (!_isDisposed) {
-      delegate.goBallistic(0.0);
-    }
+    delegate.goBallistic(0.0);
   }
 
   @override
@@ -657,44 +676,44 @@ class BallisticScrollActivity extends ScrollActivity {
   }
 
   @override
-  final bool shouldIgnorePointer;
-
-  @override
-  bool get isScrolling => true;
-
-  @override
-  double get velocity => _controller.velocity;
-
-  @override
   void dispose() {
+    if (kDebugMode) {
+      print('🛑 [BallisticScrollActivity.dispose] Disposing:');
+      print('   ✅ Controller completed: ${_controller.isCompleted}');
+      print('   📍 Final value: ${_controller.value.toStringAsFixed(2)}');
+      print('   💨 Final velocity: ${_controller.velocity.toStringAsFixed(2)}');
+      print('   ⏱️ Final elapsed: ${_controller.lastElapsedDuration?.inMilliseconds ?? 0}ms');
+    }
+
     _controller.dispose();
     super.dispose();
   }
 
   @override
   String toString() {
-    return '${describeIdentity(this)}($_controller)';
+    return '${objectRuntimeType(this, 'BallisticScrollActivity')}($_controller)';
   }
 }
 
-/// An activity that drives a scroll view through a given animation.
+/// An activity that animates a scroll view based on a physics [Simulation].
 ///
-/// For example, a [DrivenScrollActivity] is used to implement
-/// [ScrollController.animateTo].
+/// A [DrivenScrollActivity] is typically used when the user explicitly requests
+/// that the scroll view animate to a particular location (via
+/// [ScrollController.animateTo]), as opposed to a [BallisticScrollActivity]
+/// that is typically used when the user lifts their finger from the screen at
+/// a particular velocity.
 ///
-/// The scrolling will be driven by the given animation parameters
-/// or the given [Simulation].
+/// If the animation is cancelled before it completes, whether because of
+/// another activity starting or because the animation hits the edge, then the
+/// [Future] that was returned from the [ScrollPositionWithSingleContext.animateTo]
+/// method will complete with a [ScrollActivityDelegate.IdleScrollActivity].
 ///
-/// Unlike a [BallisticScrollActivity], if a [DrivenScrollActivity] is
-/// in progress when the scroll metrics change, the activity will continue
-/// with its original animation.
-///
-/// See also:
-///
-///  * [BallisticScrollActivity], which sets into motion a scroll view.
+/// Unlike [BallisticScrollActivity], this class uses a given animation
+/// [Duration] and [Curve]. It will also stop the animation if
+/// [ScrollMetrics.extentBefore] and [ScrollMetrics.extentAfter] are satisfied.
 class DrivenScrollActivity extends ScrollActivity {
-  /// Creates an activity that drives a scroll view through an animation
-  /// given by animation parameters.
+  /// Creates an activity that animates a scroll view based on a [physics]
+  /// simulation.
   DrivenScrollActivity(
     super.delegate, {
     required double from,
@@ -703,42 +722,39 @@ class DrivenScrollActivity extends ScrollActivity {
     required Curve curve,
     required TickerProvider vsync,
   }) : assert(duration > Duration.zero) {
-    _completer = Completer<void>();
-    _controller =
-        AnimationController.unbounded(
-            value: from,
-            debugLabel: objectRuntimeType(this, 'DrivenScrollActivity'),
-            vsync: vsync,
-          )
-          ..addListener(_tick)
-          ..animateTo(
-            to,
-            duration: duration,
-            curve: curve,
-          ).whenComplete(_end); // won't trigger if we dispose _controller before it completes.
-  }
+    if (kDebugMode) {
+      print('🎬 [DrivenScrollActivity] Constructor:');
+      print('   📍 From: ${from.toStringAsFixed(2)} → To: ${to.toStringAsFixed(2)}');
+      print('   📏 Delta: ${(to - from).toStringAsFixed(2)} pixels');
+      print('   ⏱️ Duration: ${duration.inMilliseconds}ms');
+      print('   📈 Curve: ${curve.runtimeType}');
+      print('   🎭 Vsync: ${vsync.runtimeType}');
+      print('   ⚡ Creating AnimationController...');
+    }
 
-  /// Creates an activity that drives a scroll view through an animation
-  /// given by a [Simulation].
-  DrivenScrollActivity.simulation(
-    super.delegate,
-    Simulation simulation, {
-    required TickerProvider vsync,
-  }) {
     _completer = Completer<void>();
-    _controller =
-        AnimationController.unbounded(
-            debugLabel: objectRuntimeType(this, 'DrivenScrollActivity'),
-            vsync: vsync,
-          )
-          ..addListener(_tick)
-          ..animateWith(
-            simulation,
-          ).whenComplete(_end); // won't trigger if we dispose _controller before it completes.
+    _controller = AnimationController(
+      value: 0.0,
+      duration: duration,
+      debugLabel: kDebugMode ? '$runtimeType' : null,
+      vsync: vsync,
+    );
+    _animation = _controller.drive(Tween<double>(
+      begin: from,
+      end: to,
+    ).chain(CurveTween(curve: curve)));
+    _animation.addListener(_tick);
+    _controller.forward();
+
+    if (kDebugMode) {
+      print('   ✅ Animation created and started');
+      print('   🎯 Animation range: ${_animation.value.toStringAsFixed(2)} → ${to.toStringAsFixed(2)}');
+    }
   }
 
   late final Completer<void> _completer;
   late final AnimationController _controller;
+  late final Animation<double> _animation;
 
   /// A [Future] that completes when the activity stops.
   ///
@@ -747,45 +763,8 @@ class DrivenScrollActivity extends ScrollActivity {
   /// animation to stop before it reaches the end.
   Future<void> get done => _completer.future;
 
-  void _tick() {
-    if (!applyMoveTo(_controller.value)) {
-      delegate.goIdle();
-    }
-  }
-
-  /// Move the position to the given location.
-  ///
-  /// If the new position was fully applied, returns true. If there was any
-  /// overflow, returns false.
-  ///
-  /// The default implementation calls [ScrollActivityDelegate.setPixels]
-  /// and returns true if the overflow was zero.
-  @protected
-  bool applyMoveTo(double value) {
-    return delegate.setPixels(value).abs() < precisionErrorTolerance;
-  }
-
-  void _end() {
-    // Check if the activity was disposed before going ballistic because _end might be called
-    // if _controller is disposed just after completion.
-    if (!_isDisposed) {
-      delegate.goBallistic(velocity);
-    }
-  }
-
   @override
-  void dispatchOverscrollNotification(
-    ScrollMetrics metrics,
-    BuildContext context,
-    double overscroll,
-  ) {
-    OverscrollNotification(
-      metrics: metrics,
-      context: context,
-      overscroll: overscroll,
-      velocity: velocity,
-    ).dispatch(context);
-  }
+  double get velocity => _controller.velocity;
 
   @override
   bool get shouldIgnorePointer => true;
@@ -793,18 +772,39 @@ class DrivenScrollActivity extends ScrollActivity {
   @override
   bool get isScrolling => true;
 
-  @override
-  double get velocity => _controller.velocity;
+  void _tick() {
+    if (kDebugMode && _controller.lastElapsedDuration != null) {
+      final elapsedMs = _controller.lastElapsedDuration!.inMilliseconds;
+      if (elapsedMs % 50 == 0 || _controller.isCompleted) { // Print every 50ms or when completed
+        print('🎬 [DrivenScrollActivity._tick] Frame update:');
+        print('   ⏱️ Elapsed: ${elapsedMs}ms');
+        print('   📊 Controller value: ${_controller.value.toStringAsFixed(4)}');
+        print('   📍 Animation value: ${_animation.value.toStringAsFixed(2)}');
+        print('   ✅ Is completed: ${_controller.isCompleted}');
+        print('   📍 Setting pixels to: ${_animation.value}');
+      }
+    }
+
+    if (delegate.setPixels(_animation.value) != 0.0) {
+      delegate.goIdle();
+    }
+  }
 
   @override
-  void dispose() {
+  void disposeActivity() {
+    if (kDebugMode) {
+      print('🛑 [DrivenScrollActivity.disposeActivity] Disposing:');
+      print('   ✅ Controller completed: ${_controller.isCompleted}');
+      print('   📍 Final animation value: ${_animation.value.toStringAsFixed(2)}');
+      print('   ⏱️ Final elapsed: ${_controller.lastElapsedDuration?.inMilliseconds ?? 0}ms');
+    }
+
     _completer.complete();
     _controller.dispose();
-    super.dispose();
   }
 
   @override
   String toString() {
-    return '${describeIdentity(this)}($_controller)';
+    return '${objectRuntimeType(this, 'DrivenScrollActivity')}($_controller)';
   }
 }

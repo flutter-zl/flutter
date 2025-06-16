@@ -14,6 +14,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/foundation.dart';
 
 import 'basic.dart';
 import 'framework.dart';
@@ -174,8 +175,22 @@ class ScrollPositionWithSingleContext extends ScrollPosition implements ScrollAc
   }
 
   @override
-  Future<void> animateTo(double to, {required Duration duration, required Curve curve}) {
-    if (nearEqual(to, pixels, physics.toleranceFor(this).distance)) {
+  Future<void> animateTo(
+    double to, {
+    required Duration duration,
+    required Curve curve,
+  }) {
+    if (kDebugMode) {
+      print('🎯 [ScrollPositionWithSingleContext.animateTo] Creating animation:');
+      print('   📍 From: ${pixels.toStringAsFixed(2)} → To: ${to.toStringAsFixed(2)}');
+      print('   📏 Delta: ${(to - pixels).toStringAsFixed(2)} pixels');
+      print('   ⏱️ Duration: ${duration.inMilliseconds}ms');
+      print('   📈 Curve: ${curve.runtimeType}');
+      print('   🔧 Physics: ${physics.runtimeType}');
+      print('   🎬 Creating DrivenScrollActivity...');
+    }
+
+    if (nearEqual(pixels, to, physics.toleranceFor(this).distance)) {
       // Skip the animation, go straight to the position as we are already close.
       jumpTo(to);
       return Future<void>.value();
@@ -208,6 +223,14 @@ class ScrollPositionWithSingleContext extends ScrollPosition implements ScrollAc
 
   @override
   void pointerScroll(double delta) {
+    if (kDebugMode) {
+      print('🖱️ [ScrollPositionWithSingleContext.pointerScroll] Mouse wheel event:');
+      print('   📍 Current pixels: ${pixels.toStringAsFixed(2)}');
+      print('   📏 Delta: ${delta.toStringAsFixed(2)}');
+      print('   🎯 New target: ${(pixels + delta).toStringAsFixed(2)}');
+      print('   🔧 Physics: ${physics.runtimeType}');
+    }
+
     // If an update is made to pointer scrolling here, consider if the same
     // (or similar) change should be made in
     // _NestedScrollCoordinator.pointerScroll.

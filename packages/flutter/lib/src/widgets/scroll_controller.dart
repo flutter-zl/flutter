@@ -200,10 +200,10 @@ class ScrollController extends ChangeNotifier {
   ///
   /// An animation will be interrupted whenever the user attempts to scroll
   /// manually, or whenever another activity is started, or whenever the
-  /// animation reaches the edge of the viewport and attempts to overscroll. (If
-  /// the [ScrollPosition] does not overscroll but instead allows scrolling
-  /// beyond the extents, then going beyond the extents will not interrupt the
-  /// animation.)
+  /// animation reaches the edge of the viewport and attempts to overscroll.
+  /// (If the [ScrollPosition] does not overscroll but instead allows
+  /// scrolling beyond the extents, then going beyond the extents will not
+  /// interrupt the animation.)
   ///
   /// The animation is indifferent to changes to the viewport or content
   /// dimensions.
@@ -219,41 +219,11 @@ class ScrollController extends ChangeNotifier {
   /// When calling [animateTo] in widget tests, `await`ing the returned
   /// [Future] may cause the test to hang and timeout. Instead, use
   /// [WidgetTester.pumpAndSettle].
-  Future<void> animateTo(
-    double offset, {
-    Duration? duration,
-    Curve? curve
-  }) async {
+  Future<void> animateTo(double offset, {required Duration duration, required Curve curve}) async {
     assert(_positions.isNotEmpty, 'ScrollController not attached to any scroll views.');
-
-    // Platform-aware animation behavior on web
-    if (kIsWeb && duration == null && curve == null) {
-      // Use smooth animated scrolling on web when no explicit duration/curve provided
-      if (kDebugMode) {
-        print('🌐 ScrollController.animateTo: Using smooth web animation to offset $offset');
-      }
-      await Future.wait<void>(<Future<void>>[
-        for (int i = 0; i < _positions.length; i += 1)
-          _positions[i].animateTo(
-            offset,
-            duration: const Duration(microseconds: 1),
-            curve: const ScrollAnimatorCurve(type: ScrollType.programmatic),
-          ),
-      ]);
-      return;
-    }
-
-    // Standard behavior: require both duration and curve
-    assert(duration != null && curve != null,
-      'Either both duration and curve must be provided, or neither (web only).');
-
-    if (kDebugMode) {
-      print('📱 ScrollController.animateTo: Using standard animation to offset $offset with duration ${duration!.inMilliseconds}ms');
-    }
-
     await Future.wait<void>(<Future<void>>[
       for (int i = 0; i < _positions.length; i += 1)
-        _positions[i].animateTo(offset, duration: duration!, curve: curve!),
+        _positions[i].animateTo(offset, duration: duration, curve: curve),
     ]);
   }
 
