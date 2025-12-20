@@ -77,7 +77,9 @@ class AccessibilityAnnouncements {
       /// The default value for assertiveness is `polite`.
       final int assertivenessIndex = dataMap.tryInt('assertiveness') ?? 0;
       final Assertiveness assertiveness = Assertiveness.values[assertivenessIndex];
-      announce(message, assertiveness);
+      final int? delayMs = dataMap.tryInt('delay');
+      final Duration? delay = delayMs != null ? Duration(milliseconds: delayMs) : null;
+      announce(message, assertiveness, delay: delay);
     }
   }
 
@@ -86,7 +88,10 @@ class AccessibilityAnnouncements {
   /// [message] is the text of the announcement.
   ///
   /// [assertiveness] controls how interruptive the announcement is.
-  void announce(String message, Assertiveness assertiveness) {
+  ///
+  /// [delay] specifies how long the message should remain in the DOM before
+  /// being removed. If not specified, [liveMessageDuration] is used.
+  void announce(String message, Assertiveness assertiveness, {Duration? delay}) {
     final DomHTMLElement ariaLiveElement = ariaLiveElementFor(assertiveness);
 
     final DomHTMLDivElement messageElement = createDomHTMLDivElement();
@@ -94,7 +99,7 @@ class AccessibilityAnnouncements {
     messageElement.text = _appendSpace ? '$message\u00A0' : message;
     _appendSpace = !_appendSpace;
     ariaLiveElement.append(messageElement);
-    Timer(liveMessageDuration, () => messageElement.remove());
+    Timer(delay ?? liveMessageDuration, () => messageElement.remove());
   }
 
   static DomHTMLElement _createElement(Assertiveness assertiveness) {

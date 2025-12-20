@@ -100,6 +100,7 @@ class AnnounceSemanticsEvent extends SemanticsEvent {
     this.textDirection,
     this.viewId, {
     this.assertiveness = Assertiveness.polite,
+    this.delay,
   }) : super('announce');
 
   /// The view that this announcement is on.
@@ -119,6 +120,16 @@ class AnnounceSemanticsEvent extends SemanticsEvent {
   /// this option currently has no effect.
   final Assertiveness assertiveness;
 
+  /// The duration the announcement message should remain in the DOM before
+  /// being removed.
+  ///
+  /// This is useful for long messages that require more time for screen readers
+  /// to finish reading. If not specified, a platform-specific default is used
+  /// (typically 300 milliseconds on web).
+  ///
+  /// This option is currently only supported on the web platform.
+  final Duration? delay;
+
   @override
   Map<String, dynamic> getDataMap() {
     return <String, dynamic>{
@@ -126,6 +137,7 @@ class AnnounceSemanticsEvent extends SemanticsEvent {
       'message': message,
       'textDirection': textDirection.index,
       if (assertiveness != Assertiveness.polite) 'assertiveness': assertiveness.index,
+      if (delay != null) 'delay': delay!.inMilliseconds,
     };
   }
 }

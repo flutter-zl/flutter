@@ -141,5 +141,43 @@ void testMain() {
       await Future<void>.delayed(liveMessageDuration);
       expectNoMessages();
     });
+
+    test('announce() with custom delay', () async {
+      const customDelay = Duration(milliseconds: 50);
+      accessibilityAnnouncements.announce(
+        'delayed message',
+        Assertiveness.polite,
+        delay: customDelay,
+      );
+      expectMessages(polite: 'delayed message');
+
+      await Future<void>.delayed(liveMessageDuration);
+      expectMessages(polite: 'delayed message');
+
+      await Future<void>.delayed(customDelay);
+      expectNoMessages();
+    });
+
+    test('handleMessage with delay parameter', () async {
+      const customDelay = Duration(milliseconds: 50);
+      accessibilityAnnouncements.handleMessage(
+        codec,
+        codec.encodeMessage(<dynamic, dynamic>{
+          'data': <dynamic, dynamic>{
+            'message': 'delayed via handleMessage',
+            'delay': customDelay.inMilliseconds,
+          },
+        }),
+      );
+      expectMessages(polite: 'delayed via handleMessage');
+
+      // Message should still be present after default liveMessageDuration
+      await Future<void>.delayed(liveMessageDuration);
+      expectMessages(polite: 'delayed via handleMessage');
+
+      // Message should be removed after custom delay
+      await Future<void>.delayed(customDelay);
+      expectNoMessages();
+    });
   });
 }

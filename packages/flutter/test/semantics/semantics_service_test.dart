@@ -27,6 +27,12 @@ void main() {
       TextDirection.rtl,
       assertiveness: Assertiveness.assertive,
     );
+    await SemanticsService.sendAnnouncement(
+      tester.view,
+      'announcement 3',
+      TextDirection.ltr,
+      delay: const Duration(milliseconds: 500),
+    );
     expect(
       log,
       equals(<Map<String, dynamic>>[
@@ -45,6 +51,15 @@ void main() {
             'message': 'announcement 2',
             'textDirection': 0,
             'assertiveness': 1,
+          },
+        },
+        <String, dynamic>{
+          'type': 'announce',
+          'data': <String, dynamic>{
+            'viewId': tester.view.viewId,
+            'message': 'announcement 3',
+            'textDirection': 1,
+            'delay': 500,
           },
         },
       ]),

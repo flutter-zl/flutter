@@ -57,6 +57,7 @@ abstract final class SemanticsService {
     String message,
     TextDirection textDirection, {
     Assertiveness assertiveness = Assertiveness.polite,
+    Duration? delay,
   }) async {
     final FlutterView? view = PlatformDispatcher.instance.implicitView;
     assert(
@@ -69,6 +70,7 @@ abstract final class SemanticsService {
       textDirection,
       view!.viewId,
       assertiveness: assertiveness,
+      delay: delay,
     );
     await SystemChannels.accessibility.send(event.toMap());
   }
@@ -78,17 +80,25 @@ abstract final class SemanticsService {
   /// One can use [View.of] to get the current [FlutterView].
   ///
   /// {@macro flutter.semantics.service.announce}
+  ///
+  /// The [delay] parameter specifies how long the announcement message should
+  /// remain in the DOM before being removed. This is useful for long messages
+  /// that require more time for screen readers to finish reading. If not
+  /// specified, a platform-specific default is used (typically 300 milliseconds
+  /// on web). This option is currently only supported on the web platform.
   static Future<void> sendAnnouncement(
     FlutterView view,
     String message,
     TextDirection textDirection, {
     Assertiveness assertiveness = Assertiveness.polite,
+    Duration? delay,
   }) async {
     final event = AnnounceSemanticsEvent(
       message,
       textDirection,
       view.viewId,
       assertiveness: assertiveness,
+      delay: delay,
     );
     await SystemChannels.accessibility.send(event.toMap());
   }
