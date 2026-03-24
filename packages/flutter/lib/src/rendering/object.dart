@@ -21,6 +21,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 
 import 'binding.dart';
 import 'debug.dart';
@@ -4957,6 +4958,9 @@ mixin SemanticsAnnotationsMixin on RenderObject {
     }
     if (_properties.linkUrl != null) {
       config.linkUrl = _properties.linkUrl;
+      if (_properties.onTap == null) {
+        config.onTap = _performLinkTap;
+      }
     }
     if (_properties.slider != null) {
       config.isSlider = _properties.slider!;
@@ -5160,6 +5164,24 @@ mixin SemanticsAnnotationsMixin on RenderObject {
 
   void _performTap() {
     _properties.onTap?.call();
+  }
+
+  void _performLinkTap() {
+    final Uri? linkUrl = _properties.linkUrl;
+    if (linkUrl == null) {
+      return;
+    }
+    final ByteData message = const JSONMethodCodec().encodeMethodCall(
+      MethodCall('pushRouteInformation', <String, dynamic>{
+        'location': linkUrl.toString(),
+        'state': null,
+      }),
+    );
+    ServicesBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
+      'flutter/navigation',
+      message,
+      (_) {},
+    );
   }
 
   void _performLongPress() {

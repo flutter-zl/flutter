@@ -1921,6 +1921,8 @@ extension type DomMouseEvent._(JSObject _) implements DomUIEvent {
   external double get button;
   external double? get buttons;
   external bool get ctrlKey;
+  external bool get metaKey;
+  external bool get shiftKey;
   external bool getModifierState(String keyArg);
 }
 
