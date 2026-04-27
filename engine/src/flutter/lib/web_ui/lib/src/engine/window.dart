@@ -184,12 +184,7 @@ class EngineFlutterView implements ui.FlutterView {
   void browserSmoothScrollTo(double offset) => browserScrollController.smoothScrollTo(offset);
 
   @override
-  void browserScrollBy(double delta) {
-    if (browserScrollController.pvTouchActive) {
-      return;
-    }
-    browserScrollController.scrollBy(delta);
-  }
+  void browserScrollBy(double delta) => browserScrollController.scrollBy(delta);
 
   @override
   void updateBrowserScrollContentHeight(double height) =>

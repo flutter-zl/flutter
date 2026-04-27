@@ -817,32 +817,6 @@ mixin _WheelEventListenerMixin on _BaseAdapter {
 
     final wheelEvent = event as DomWheelEvent;
 
-    // When browser-driven scrolling is active, check if the wheel event
-    // targets a platform view BEFORE dispatching to the framework.
-    // If it does, handle it entirely in the engine and skip framework
-    // dispatch to prevent BrowserScrollPhysics from also scrolling.
-    if (_view.browserScrollController.enabled) {
-      DomElement? pvElement;
-      final DomEventTarget? target = event.target;
-      if (target != null && target.isA<DomElement>()) {
-        final el = target as DomElement;
-        if (_view.dom.platformViewsHost.contains(el)) {
-          pvElement = el;
-        } else {
-          pvElement = _view.browserScrollController.findPlatformViewAtPoint(
-            wheelEvent.clientX,
-            wheelEvent.clientY,
-          );
-        }
-      }
-
-      if (pvElement != null) {
-        event.preventDefault();
-        _view.browserScrollController.handlePlatformViewWheel(pvElement, wheelEvent.deltaY);
-        return;
-      }
-    }
-
     _lastWheelEventAllowedDefault = false;
     _lastWheelEventHandledByWidget = false;
     _callback(event, _convertWheelEventToPointerData(wheelEvent));
@@ -1091,13 +1065,7 @@ class _PointerAdapter extends _BaseAdapter with _WheelEventListenerMixin {
       _convertEventsToPointerData(data: pointerData, event: event, details: down);
       _callback(event, pointerData);
 
-      // When browser-driven scrolling is active and this is a touch event,
-      // preventDefault to stop the browser from initiating native
-      // touch-action scrolling. Platform view scrolling is handled
-      // programmatically by BrowserScrollController's touch chaining.
-      if (_view.browserScrollController.enabled && event.pointerType == 'touch') {
-        event.preventDefault();
-      } else if (event.target == _viewTarget) {
+      if (event.target == _viewTarget) {
         // Ensure smooth focus transitions between text fields within the Flutter view.
         // Without preventing the default and this delay, the engine may not have fully
         // rendered the next input element, leading to the focus incorrectly returning to
