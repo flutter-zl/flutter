@@ -58,7 +58,7 @@ void doTests() {
       rootElement.remove();
     });
 
-    test('FullPage enableBrowserScrolling sets touch-action:none on rootElement', () {
+    test('FullPage enableBrowserScrolling sets touch-action:pan-y on rootElement', () {
       final strategy = EmbeddingStrategy.create() as FullPageEmbeddingStrategy;
       final DomElement rootElement = createDomElement('flutter-view');
       domDocument.body!.append(rootElement);
@@ -66,7 +66,7 @@ void doTests() {
       strategy.enableBrowserScrolling(rootElement);
 
       final String touchAction = rootElement.style.getPropertyValue('touch-action');
-      expect(touchAction, 'none');
+      expect(touchAction, 'pan-y');
 
       strategy.disableBrowserScrolling(rootElement);
       rootElement.remove();

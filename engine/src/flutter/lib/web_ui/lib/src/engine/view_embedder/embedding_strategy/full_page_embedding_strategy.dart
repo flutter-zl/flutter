@@ -93,12 +93,9 @@ class FullPageEmbeddingStrategy implements EmbeddingStrategy {
       ..left = '0'
       ..overflow = 'auto';
 
-    // Use touch-action: none so the browser does not initiate native
-    // touch scrolling. Flutter handles all touch input and forwards
-    // scroll deltas to the browser via the dart:ui browserScrollBy API.
-    // With pan-y, the browser fires pointercancel before Flutter can
-    // process the gesture.
-    setElementStyle(rootElement, 'touch-action', 'none');
+    // Allow the browser to handle vertical touch-drag as native scroll.
+    // Horizontal and other gestures still flow to Flutter as pointer events.
+    setElementStyle(rootElement, 'touch-action', 'pan-y');
 
     // Make all existing children of flutter-view sticky so they stay
     // visible at the top of the viewport while the element scrolls.
