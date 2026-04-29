@@ -658,6 +658,17 @@ class ScrollableState extends State<Scrollable>
   bool _reachedBottom = false;
   double _lastReportedHeight = 0;
 
+  bool get _resolvedPhysicsIncludesBrowserScrollPhysics {
+    ScrollPhysics? physics = _physics;
+    while (physics != null) {
+      if (physics is BrowserScrollPhysics) {
+        return true;
+      }
+      physics = physics.parent;
+    }
+    return false;
+  }
+
   void _setupBrowserScroll() {
     final bool shouldBeActive = _configuration.enableBrowserScrolling;
 
@@ -681,6 +692,9 @@ class ScrollableState extends State<Scrollable>
       }
       _cancelPendingSlotClaim();
       _activeBrowserScrollInstance = this;
+      if (!_resolvedPhysicsIncludesBrowserScrollPhysics) {
+        _updatePosition();
+      }
       browserScrollViewBinding = _viewBinding;
       _browserScrollActive = true;
       _viewBinding!.onBrowserScroll = _onBrowserScrollCallback;
