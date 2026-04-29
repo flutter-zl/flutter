@@ -29,11 +29,6 @@ class FullPageEmbeddingStrategy implements EmbeddingStrategy {
   @override
   bool get supportsBrowserScrolling => true;
 
-  bool _browserScrollingEnabled = false;
-
-  /// Whether browser-driven scrolling is currently active.
-  bool get browserScrollingEnabled => _browserScrollingEnabled;
-
   DomElement? _scrollHeightPlaceholder;
 
   // Per-child inline style snapshot taken on enable so disable can restore
@@ -65,8 +60,6 @@ class FullPageEmbeddingStrategy implements EmbeddingStrategy {
 
   @override
   void enableBrowserScrolling(DomElement rootElement) {
-    _browserScrollingEnabled = true;
-
     setElementStyle(hostElement, 'position', 'static');
     setElementStyle(hostElement, 'overflow', 'hidden');
     setElementStyle(hostElement, 'padding', '0');
@@ -138,8 +131,6 @@ class FullPageEmbeddingStrategy implements EmbeddingStrategy {
 
   @override
   void disableBrowserScrolling(DomElement rootElement) {
-    _browserScrollingEnabled = false;
-
     _setHostStyles();
 
     rootElement.style

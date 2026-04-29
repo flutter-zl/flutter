@@ -697,7 +697,7 @@ class ScrollableState extends State<Scrollable>
       }
       browserScrollViewBinding = _viewBinding;
       _browserScrollActive = true;
-      _viewBinding!.onBrowserScroll = _onBrowserScrollCallback;
+      _viewBinding!.onBrowserScroll = _syncScrollFromBrowser;
       _effectiveScrollController.addListener(_onBrowserScrollPositionChanged);
       if (!_browserScrollEnabled) {
         _enableBrowserScrolling();
@@ -746,10 +746,6 @@ class ScrollableState extends State<Scrollable>
   void _disableBrowserScrolling() {
     _browserScrollEnabled = false;
     _viewBinding!.disableBrowserScrolling();
-  }
-
-  void _onBrowserScrollCallback(double offset) {
-    _syncScrollFromBrowser(offset);
   }
 
   void _syncScrollFromBrowser(double scrollTop) {

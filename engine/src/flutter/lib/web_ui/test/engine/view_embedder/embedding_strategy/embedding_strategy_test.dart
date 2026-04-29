@@ -52,7 +52,6 @@ void doTests() {
       strategy.enableBrowserScrolling(rootElement);
 
       expect(rootElement.style.overflow, 'auto');
-      expect(strategy.browserScrollingEnabled, isTrue);
 
       strategy.disableBrowserScrolling(rootElement);
       rootElement.remove();
@@ -83,20 +82,6 @@ void doTests() {
       expect(placeholder, isNotNull);
 
       strategy.disableBrowserScrolling(rootElement);
-      rootElement.remove();
-    });
-
-    test('FullPage disableBrowserScrolling resets state', () {
-      final strategy = EmbeddingStrategy.create() as FullPageEmbeddingStrategy;
-      final DomElement rootElement = createDomElement('flutter-view');
-      domDocument.body!.append(rootElement);
-
-      strategy.enableBrowserScrolling(rootElement);
-      expect(strategy.browserScrollingEnabled, isTrue);
-
-      strategy.disableBrowserScrolling(rootElement);
-      expect(strategy.browserScrollingEnabled, isFalse);
-
       rootElement.remove();
     });
 
