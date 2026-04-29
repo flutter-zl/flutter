@@ -4,6 +4,8 @@
 
 import 'dart:ui' show FlutterView;
 
+import 'package:flutter/foundation.dart';
+
 /// Non-web implementation of browser scroll view bindings.
 ///
 /// On non-web platforms, browser scrolling is not available. All methods
@@ -16,6 +18,20 @@ class BrowserScrollViewBinding {
 
   /// The [FlutterView] this binding is associated with.
   final FlutterView view;
+
+  /// Whether the engine supports browser-driven scrolling for this view.
+  ///
+  /// Always false on non-web platforms in production, so apps that ship
+  /// to iOS/Android/desktop don't accidentally engage [BrowserScrollPhysics]
+  /// against a binding the engine cannot drive. Tests can flip
+  /// [debugForceSupportedForTests] to true to exercise the browser-scroll
+  /// code path against the recording stub.
+  bool get supported => debugForceSupportedForTests;
+
+  /// Test-only override that makes [supported] return true on non-web.
+  /// Reset to false in tearDown to avoid leaking across tests.
+  @visibleForTesting
+  static bool debugForceSupportedForTests = false;
 
   /// Recorded method calls for test assertions.
   ///

@@ -172,6 +172,9 @@ class EngineFlutterView implements ui.FlutterView {
   // Browser-driven scrolling API (dart:ui surface)
 
   @override
+  bool get supportsBrowserScrolling => embeddingStrategy.supportsBrowserScrolling;
+
+  @override
   void enableBrowserScrolling() => browserScrollController.enable();
 
   @override

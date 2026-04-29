@@ -61,10 +61,18 @@ class BrowserScrollController {
     _view.embeddingStrategy.updateScrollContentHeight(height);
   }
 
+  /// Instantly scrolls the root element to [offset].
+  ///
+  /// Notifies the framework directly so its [ScrollPosition.pixels] stays
+  /// in sync. The DOM `scroll` event echo is suppressed via
+  /// [_lastProgrammaticScrollTop] to avoid a duplicate notification.
   void scrollTo(double offset) {
     if (_enabled) {
-      _lastProgrammaticScrollTop = offset;
-      _view.dom.rootElement.scrollTop = offset;
+      final DomElement root = _view.dom.rootElement;
+      root.scrollTop = offset;
+      final double newTop = root.scrollTop;
+      _lastProgrammaticScrollTop = newTop;
+      _sendScrollPositionToFramework(newTop);
     }
   }
 

@@ -142,7 +142,6 @@ class FullPageEmbeddingStrategy implements EmbeddingStrategy {
       ..overflow = '';
 
     setElementStyle(rootElement, 'touch-action', '');
-    setElementStyle(hostElement, 'touch-action', '');
 
     for (final DomElement child in rootElement.children) {
       final Map<String, String>? saved = _savedChildStyles[child];

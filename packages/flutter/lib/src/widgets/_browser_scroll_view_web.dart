@@ -21,6 +21,13 @@ class BrowserScrollViewBinding {
   // analyzer cannot resolve.
   dynamic get _webView => view;
 
+  /// Whether the engine supports browser-driven scrolling for this view.
+  ///
+  /// Returns false for embedding strategies (e.g. custom-element) that
+  /// the engine does not enable, even on web.
+  // ignore: avoid_dynamic_calls
+  bool get supported => _webView.supportsBrowserScrolling as bool;
+
   /// Enables browser-driven scrolling on the view.
   // ignore: avoid_dynamic_calls
   void enableBrowserScrolling() => _webView.enableBrowserScrolling();

@@ -32,6 +32,8 @@ abstract class FlutterView {
 
   // Browser-driven scrolling API (web-only, no-op on other platforms).
 
+  bool get supportsBrowserScrolling => false;
+
   void enableBrowserScrolling() {}
   void disableBrowserScrolling() {}
   void browserScrollTo(double offset) {}

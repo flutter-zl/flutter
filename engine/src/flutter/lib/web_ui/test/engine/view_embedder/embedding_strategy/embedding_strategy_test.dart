@@ -131,7 +131,7 @@ void doTests() {
       rootElement.remove();
     });
 
-    test('FullPage disableBrowserScrolling clears hostElement touch-action', () {
+    test('FullPage disableBrowserScrolling restores hostElement touch-action', () {
       final strategy = EmbeddingStrategy.create() as FullPageEmbeddingStrategy;
       final DomElement rootElement = createDomElement('flutter-view');
       domDocument.body!.append(rootElement);
@@ -140,7 +140,10 @@ void doTests() {
       expect(strategy.hostElement.style.getPropertyValue('touch-action'), 'pan-y');
 
       strategy.disableBrowserScrolling(rootElement);
-      expect(strategy.hostElement.style.getPropertyValue('touch-action'), '');
+      // _setHostStyles, called from disable, restores touch-action: none.
+      // The class invariant for non-browser-scroll mode is none, matching
+      // the constructor.
+      expect(strategy.hostElement.style.getPropertyValue('touch-action'), 'none');
 
       rootElement.remove();
     });

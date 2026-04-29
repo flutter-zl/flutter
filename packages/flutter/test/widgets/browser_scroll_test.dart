@@ -11,6 +11,7 @@ library;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/src/widgets/_browser_scroll_view_io.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -63,6 +64,14 @@ void _clearCalls() {
 }
 
 void main() {
+  setUpAll(() {
+    BrowserScrollViewBinding.debugForceSupportedForTests = true;
+  });
+
+  tearDownAll(() {
+    BrowserScrollViewBinding.debugForceSupportedForTests = false;
+  });
+
   group('ScrollableState browser-scroll integration – placeholder height', () {
     late ScrollController controller;
 

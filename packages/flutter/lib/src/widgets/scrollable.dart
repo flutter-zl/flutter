@@ -651,7 +651,8 @@ class ScrollableState extends State<Scrollable>
   double _lastReportedHeight = 0;
 
   void _setupBrowserScroll() {
-    final bool shouldBeActive = _configuration.enableBrowserScrolling;
+    final bool shouldBeActive =
+        _configuration.enableBrowserScrolling && (_viewBinding?.supported ?? false);
 
     if (shouldBeActive && !_browserScrollActive) {
       // Only the first ScrollableState to claim the binding wins. Nested
@@ -776,6 +777,13 @@ class ScrollableState extends State<Scrollable>
       _maxReachedPixels = pos.maxScrollExtent;
     }
 
+    // Invalidate the bottom-reached latch when content has grown past the
+    // previously known bottom. Otherwise an infinite list or load-more
+    // pattern stays gated at the old bottom forever, because lookahead
+    // remains zero and the placeholder never grows.
+    if (pos.maxScrollExtent > _maxReachedPixels + 1.0) {
+      _reachedBottom = false;
+    }
     if (pos.pixels >= pos.maxScrollExtent - 1.0) {
       _reachedBottom = true;
     }
@@ -808,6 +816,7 @@ class ScrollableState extends State<Scrollable>
     ScrollPhysics? physicsFromWidget =
         widget.physics ?? widget.scrollBehavior?.getScrollPhysics(context);
     if (_configuration.enableBrowserScrolling &&
+        (_viewBinding?.supported ?? false) &&
         (_activeBrowserScrollInstance == null || _activeBrowserScrollInstance == this)) {
       physicsFromWidget = const BrowserScrollPhysics().applyTo(physicsFromWidget);
     }
