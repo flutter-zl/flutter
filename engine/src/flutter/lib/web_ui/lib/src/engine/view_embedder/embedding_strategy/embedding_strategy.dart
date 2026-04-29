@@ -50,7 +50,7 @@ abstract class EmbeddingStrategy {
 
   /// Enables browser-driven scrolling for the outermost scrollable.
   ///
-  /// When enabled, the host element becomes a real scrollable DOM element,
+  /// When enabled, [rootElement] becomes a real scrollable DOM element,
   /// allowing the browser to handle scroll physics, momentum, and scroll
   /// chaining natively. The framework syncs its scroll position from the
   /// browser's scroll events.

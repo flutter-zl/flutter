@@ -10,10 +10,11 @@ import 'window.dart';
 
 /// Manages browser-driven scrolling for a Flutter view.
 ///
-/// When enabled, the host element becomes a real scrollable DOM element. The
-/// browser handles wheel, touch, keyboard, momentum, and scroll chaining
-/// natively. This controller listens for the resulting `scroll` event and
-/// reports the new position to the framework via [FlutterView.onBrowserScroll].
+/// When enabled, the view's root element (`<flutter-view>`) becomes a real
+/// scrollable DOM element. The browser handles wheel, touch, keyboard,
+/// momentum, and scroll chaining natively. This controller listens for the
+/// resulting `scroll` event and reports the new position to the framework
+/// via [FlutterView.onBrowserScroll].
 ///
 /// The framework communicates content extent via the dart:ui API on
 /// [FlutterView].

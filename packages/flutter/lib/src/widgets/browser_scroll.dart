@@ -32,10 +32,23 @@ import 'scrollable.dart';
 /// active. Both are routed through the browser's native scroll mechanism,
 /// so they respect the actual content height even under lazy layout.
 ///
-/// Known limitation: on iOS Safari, touch-drag inside a cross-origin iframe
-/// nested under this widget waits for the iframe's internal momentum to
-/// finish before chaining to the parent page. This is a browser-level
-/// behavior that cannot be intercepted from the parent document.
+/// Known limitations:
+///
+/// * Only one [BrowserScrollable] can drive the browser at a time. Mounting
+///   a second one while another holds the slot leaves the second on
+///   Dart-driven physics. This shows up with `Navigator.push` to a route
+///   whose body is wrapped in [BrowserScrollable]: the pushed page is
+///   rejected because the route below it still owns the slot. Slot
+///   reclaim is on the roadmap; for now, build flows that have a single
+///   browser-scroll route at a time.
+/// * Only the full-page embedding strategy supports browser scrolling.
+///   Custom-element views report unsupported, which means the wrapped
+///   scrollable falls back to Dart-driven scrolling (no [BrowserScrollPhysics]
+///   is applied).
+/// * On iOS Safari, touch-drag inside a cross-origin iframe nested under
+///   this widget waits for the iframe's internal momentum to finish before
+///   chaining to the parent page. This is a browser-level behavior that
+///   cannot be intercepted from the parent document.
 ///
 /// Example:
 /// ```dart

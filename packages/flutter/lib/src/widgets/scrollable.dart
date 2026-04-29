@@ -628,6 +628,7 @@ class ScrollableState extends State<Scrollable>
   /// [ScrollController.animateTo] and [ScrollController.jumpTo] to the browser
   /// when [BrowserScrollPhysics] is active. Only non-null while browser
   /// scrolling is active.
+  @internal
   static BrowserScrollViewBinding? browserScrollViewBinding;
 
   /// Grows the browser scroll placeholder to at least [target] so a
@@ -637,6 +638,7 @@ class ScrollableState extends State<Scrollable>
   /// Called by [ScrollPositionWithSingleContext] before dispatching
   /// `browserSmoothScrollTo` or `browserScrollTo` with a potentially
   /// large target. No-op when no browser-scroll owner is active.
+  @internal
   static void prepareActiveBrowserScrollForTarget(double target) {
     _activeBrowserScrollInstance?._prepareBrowserScrollForTarget(target);
   }
