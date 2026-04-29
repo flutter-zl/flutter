@@ -767,6 +767,14 @@ class ScrollableState extends State<Scrollable>
     if (pos.pixels > _maxReachedPixels) {
       _maxReachedPixels = pos.pixels;
     }
+    // Never let _maxReachedPixels exceed the actual content extent. The lazy
+    // ListView's estimate fed into _prepareBrowserScrollForTarget can be too
+    // high; once it converges downward, shrink so the placeholder matches
+    // real content. Otherwise the browser scrolls past Flutter's painted
+    // range and creates a dead zone above the visible bottom.
+    if (_maxReachedPixels > pos.maxScrollExtent) {
+      _maxReachedPixels = pos.maxScrollExtent;
+    }
 
     if (pos.pixels >= pos.maxScrollExtent - 1.0) {
       _reachedBottom = true;
