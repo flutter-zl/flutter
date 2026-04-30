@@ -936,9 +936,12 @@ class ScrollableState extends State<Scrollable>
 
     if (_shouldUpdatePosition(oldWidget)) {
       _updatePosition();
-    }
-
-    if (controllerChanged || widget.physics != oldWidget.physics) {
+      // Position update can change physics or scrollBehavior, both of which
+      // affect whether browser scrolling should be active. Re-evaluate the
+      // setup so a runtime toggle of scrollBehavior.enableBrowserScrolling
+      // also activates or tears down the engine binding.
+      _setupBrowserScroll();
+    } else if (controllerChanged) {
       _setupBrowserScroll();
     }
   }

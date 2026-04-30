@@ -182,20 +182,25 @@ class ScrollPositionWithSingleContext extends ScrollPosition implements ScrollAc
     final BrowserScrollViewBinding? binding = ScrollableState.browserScrollViewBinding;
     final double proposed = pixels - physics.applyPhysicsToUserOffset(this, delta);
 
-    if (binding != null) {
-      // When browser scrolling is active, clamp pixels at each boundary and
-      // forward the excess to the browser so the outer page scrolls.
+    // Manual boundary forwarding only applies to inner scrollables with
+    // normal physics. The outer scrollable runs BrowserScrollPhysics, which
+    // returns the entire delta as overscroll. setPixels would emit an
+    // OverscrollNotification that BrowserScrollable forwards to the browser
+    // already; doing it manually here would double-forward at the boundary.
+    if (binding != null && physics is! BrowserScrollPhysics) {
+      // When browser scrolling is active for an inner scrollable, clamp
+      // pixels at each boundary and forward the excess to the browser so
+      // the outer page scrolls.
       //
       // At maxScrollExtent (bottom): clamping prevents the inner list from
-      // rubber-band bouncing while the parent simultaneously scrolls
-      // (double-scroll artifact).
+      // rubber-band bouncing while the parent simultaneously scrolls.
       //
-      // At minScrollExtent (top): clamping keeps pixels at the boundary while
-      // didOverscrollBy dispatches an OverscrollNotification, which
+      // At minScrollExtent (top): clamping keeps pixels at the boundary
+      // while didOverscrollBy dispatches an OverscrollNotification, which
       // RefreshIndicator needs to reveal itself. This mirrors how
-      // RefreshIndicator works with ClampingScrollPhysics on Android — the
-      // indicator accumulates the overscroll amount from the notification, not
-      // from pixels going negative.
+      // RefreshIndicator works with ClampingScrollPhysics on Android: the
+      // indicator accumulates the overscroll amount from the notification,
+      // not from pixels going negative.
       if (proposed > maxScrollExtent) {
         final double excess = proposed - maxScrollExtent;
         setPixels(maxScrollExtent);
