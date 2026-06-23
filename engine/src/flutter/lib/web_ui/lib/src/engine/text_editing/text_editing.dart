@@ -1586,27 +1586,25 @@ abstract class DefaultTextEditingStrategy
     event as DomFocusEvent;
 
     final willGainFocusElement = event.relatedTarget as DomElement?;
-    if (willGainFocusElement == null) {
-      // If the element to gain focus is reported as `null`, it means that the
-      // window/iframe that Flutter runs in is losing focus. In this case, the
-      // engine signals to the framework to close the text input connection,
-      // allowing the focus to move elsewhere.
-      //
-      // This is fixing https://github.com/flutter/flutter/issues/155265.
-      textEditing.sendTextConnectionClosedToFrameworkIfAny();
-    } else if (_viewForElement(willGainFocusElement) == activeDomElementView) {
-      // If the focus stays within the same FlutterView, ensure the focus stays
-      // on the input element.
+    print('[DEBUG handleBlur] event.type: ${event.type}');
+    print('[DEBUG handleBlur] willGainFocusElement: $willGainFocusElement');
+    print('[DEBUG handleBlur] isEditing: ${textEditing.isEditing}');
+    print('[DEBUG handleBlur] activeElement: ${domDocument.activeElement}');
 
-      // TODO(yjbanov): Make text input less grabby. See: https://github.com/flutter/flutter/issues/166857
-      // The motivation/reasoning behind this remains murky.
-      // It's unclear why, if the browser wants to remove focus from the input,
-      // we must insist that it stays on the element. This could lead to
-      // different elements/widgets fighting over who gets the focus, or resist
-      // to user's request to move focus elsewhere, which can be super-annoying
-      // UX. We should reevaluate what it is we're trying to do here. Perhaps
-      // there's a better way.
-      moveFocusToActiveDomElement();
+    if (willGainFocusElement == null) {
+      print('[DEBUG handleBlur] willGainFocusElement is null. Do nothing...');
+      // We do not close the text input connection here, because the user might
+      // just be switching browser tabs or focusing another window, and we want
+      // to preserve the editing session when they return.
+    } else {
+      final EngineFlutterView? targetView = _viewForElement(willGainFocusElement);
+      print(
+        '[DEBUG handleBlur] targetView: $targetView, activeDomElementView: $activeDomElementView',
+      );
+      if (targetView == activeDomElementView) {
+        print('[DEBUG handleBlur] Regaining focus...');
+        moveFocusToActiveDomElement();
+      }
     }
   }
 

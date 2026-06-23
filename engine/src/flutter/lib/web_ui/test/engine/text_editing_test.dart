@@ -614,26 +614,24 @@ Future<void> testMain() async {
       spy.tearDown();
     });
 
-    test('closes input connection when window/iframe loses focus', () async {
+    test('does not close input connection when window/iframe loses focus', () async {
       final spy = PlatformMessagesSpy();
       spy.setUp();
 
-      textEditing.configuration = singlelineConfig;
+      testTextEditing.configuration = singlelineConfig;
 
       final showCompleter = Completer<void>();
-      textEditing.acceptCommand(const TextInputShow(), showCompleter.complete);
+      testTextEditing.acceptCommand(const TextInputShow(), showCompleter.complete);
       await showCompleter.future;
 
-      expect(textEditing.isEditing, isTrue);
+      expect(testTextEditing.isEditing, isTrue);
 
-      expect(domDocument.activeElement, textEditing.strategy.domElement);
+      expect(domDocument.activeElement, testTextEditing.strategy.domElement);
 
       final DomEvent event = createDomEvent('Event', 'blur');
       editingStrategy!.handleBlur(event);
 
-      expect(spy.messages, hasLength(1));
-      expect(spy.messages[0].channel, 'flutter/textinput');
-      expect(spy.messages[0].methodName, 'TextInputClient.onConnectionClosed');
+      expect(spy.messages, isEmpty);
 
       spy.tearDown();
     });
@@ -644,10 +642,10 @@ Future<void> testMain() async {
         final spy = PlatformMessagesSpy();
         spy.setUp();
 
-        textEditing.configuration = singlelineConfig;
+        testTextEditing.configuration = singlelineConfig;
 
         final showCompleter = Completer<void>();
-        textEditing.acceptCommand(const TextInputShow(), showCompleter.complete);
+        testTextEditing.acceptCommand(const TextInputShow(), showCompleter.complete);
         await showCompleter.future;
 
         // The "setSizeAndTransform" message has to be here before we call
@@ -659,17 +657,17 @@ Future<void> testMain() async {
           50,
           Matrix4.translationValues(10.0, 20.0, 30.0).storage.toList(),
         );
-        textEditing.channel.handleTextInput(
+        testTextEditing.channel.handleTextInput(
           codec.encodeMethodCall(setSizeAndTransform),
           (ByteData? data) {},
         );
 
-        expect(textEditing.isEditing, isTrue);
+        expect(testTextEditing.isEditing, isTrue);
 
-        expect(domDocument.activeElement, textEditing.strategy.domElement);
+        expect(domDocument.activeElement, testTextEditing.strategy.domElement);
 
         final EngineFlutterView flutterView = EnginePlatformDispatcher.instance.viewManager
-            .findViewForElement(textEditing.strategy.domElement)!;
+            .findViewForElement(testTextEditing.strategy.domElement)!;
 
         flutterView.dom.rootElement.focusWithoutScroll();
         expect(spy.messages, isEmpty);
@@ -689,10 +687,10 @@ Future<void> testMain() async {
           // comment above. To work around this, the test will accept both behaviors for now.
           expect(
             domDocument.activeElement,
-            anyOf(textEditing.strategy.domElement, flutterView.dom.rootElement),
+            anyOf(testTextEditing.strategy.domElement, flutterView.dom.rootElement),
           );
         } else {
-          expect(domDocument.activeElement, textEditing.strategy.domElement);
+          expect(domDocument.activeElement, testTextEditing.strategy.domElement);
         }
 
         spy.tearDown();
