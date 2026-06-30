@@ -11,6 +11,11 @@ void main() {
   internalBootstrapBrowserTest(() => testMain);
 }
 
+// `ViewFocusBinding` debounces "unfocused" notifications by 150ms (see
+// `ViewFocusBinding._handleFocusChange`). Wait a bit longer than that so the
+// debounce timer has settled by the time assertions run.
+const Duration unfocusDebounceDuration = Duration(milliseconds: 200);
+
 void testMain() {
   group(ViewFocusBinding, () {
     late List<ui.ViewFocusEvent> dispatchedViewFocusEvents;
@@ -22,8 +27,12 @@ void testMain() {
       dispatcher.onViewFocusChange = dispatchedViewFocusEvents.add;
     });
 
-    tearDown(() {
+    tearDown(() async {
       EngineSemantics.instance.semanticsEnabled = false;
+      // Let any pending debounced "unfocused" notification (see
+      // `ViewFocusBinding._handleFocusChange`) fire before the next test
+      // starts, so it doesn't bleed into the next test's expectations.
+      await Future<void>.delayed(unfocusDebounceDuration);
     });
 
     test('The view is focusable and reachable by keyboard when registered', () async {
@@ -60,6 +69,7 @@ void testMain() {
       expect(view2.dom.rootElement.getAttribute('tabindex'), '-1');
 
       view2.dom.rootElement.blur();
+      await Future<void>.delayed(unfocusDebounceDuration);
       expect(view1.dom.rootElement.getAttribute('tabindex'), '0');
       expect(view2.dom.rootElement.getAttribute('tabindex'), '0');
     });
@@ -81,6 +91,7 @@ void testMain() {
 
       view.dom.rootElement.focusWithoutScroll();
       view.dom.rootElement.blur();
+      await Future<void>.delayed(unfocusDebounceDuration);
 
       expect(dispatchedViewFocusEvents, hasLength(2));
 
@@ -127,6 +138,7 @@ void testMain() {
       view1.dom.rootElement.focusWithoutScroll();
       view2.dom.rootElement.focusWithoutScroll();
       view2.dom.rootElement.blur();
+      await Future<void>.delayed(unfocusDebounceDuration);
 
       expect(dispatchedViewFocusEvents, hasLength(3));
 
@@ -161,7 +173,7 @@ void testMain() {
       expect(dispatchedViewFocusEvents[0].direction, ui.ViewFocusDirection.forward);
     });
 
-    test('requestViewFocusChange blurs the view', () {
+    test('requestViewFocusChange blurs the view', () async {
       final EngineFlutterView view = createAndRegisterView(dispatcher);
 
       dispatcher.requestViewFocusChange(
@@ -175,6 +187,7 @@ void testMain() {
         state: ui.ViewFocusState.unfocused,
         direction: ui.ViewFocusDirection.undefined,
       );
+      await Future<void>.delayed(unfocusDebounceDuration);
 
       expect(domDocument.activeElement, isNot(view.dom.rootElement));
 
@@ -267,6 +280,36 @@ void testMain() {
       expect(dispatchedViewFocusEvents[0].viewId, view.viewId);
       expect(dispatchedViewFocusEvents[0].state, ui.ViewFocusState.focused);
       expect(dispatchedViewFocusEvents[0].direction, ui.ViewFocusDirection.forward);
+    });
+
+    // Regression test for https://github.com/flutter/flutter/issues/168458.
+    test('does not fire a spurious unfocus/focus pair when focus moves between '
+        'elements of the same view via an intermediate blur', () async {
+      final DomElement input1 = createDomElement('input');
+      final DomElement input2 = createDomElement('input');
+      final EngineFlutterView view = createAndRegisterView(dispatcher);
+
+      view.dom.rootElement.append(input1);
+      view.dom.rootElement.append(input2);
+
+      input1.focusWithoutScroll();
+      expect(dispatchedViewFocusEvents, hasLength(1));
+
+      // Simulate assistive technology (e.g. VoiceOver's rotor) moving
+      // accessibility focus from input1 to input2: the browser fires
+      // "focusout" for input1 (landing on <body>) before "focusin" for
+      // input2 arrives, as two separate actions rather than a single
+      // synchronous focus transfer.
+      input1.blur();
+      // The "focusin" for the next target arrives well within the
+      // debounce window, but not on the same task as the blur.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      input2.focusWithoutScroll();
+      await Future<void>.delayed(unfocusDebounceDuration);
+
+      // The view never actually lost focus, so no unfocused/focused pair
+      // should have been dispatched for the transient blur.
+      expect(dispatchedViewFocusEvents, hasLength(1));
     });
   });
 }

@@ -20,6 +20,10 @@ final class ViewFocusBinding {
 
   StreamSubscription<int>? _onViewCreatedListener;
 
+  // Pending timer for a debounced "unfocused" notification. See
+  // `_handleFocusChange` for why this is needed.
+  Timer? _pendingUnfocus;
+
   void init() {
     // We need a global listener here to know if the user was pressing "shift"
     // when the Flutter view receives focus, to move the Flutter focus to the
@@ -36,6 +40,8 @@ final class ViewFocusBinding {
     domDocument.body?.removeEventListener(_keyDown, _handleKeyDown);
     domDocument.body?.removeEventListener(_keyUp, _handleKeyUp);
     _onViewCreatedListener?.cancel();
+    _pendingUnfocus?.cancel();
+    _pendingUnfocus = null;
   }
 
   void changeViewFocus(int viewId, ui.ViewFocusState state) {
@@ -88,6 +94,39 @@ final class ViewFocusBinding {
 
   void _handleFocusChange(DomElement? focusedElement) {
     final int? viewId = _viewId(focusedElement);
+
+    if (viewId == null) {
+      // The new focus target isn't inside any tracked Flutter view. This can
+      // mean focus genuinely left every Flutter view (e.g. the user tabbed
+      // out into the surrounding page), but it can also be a transient state:
+      // assistive technology (e.g. a screen reader's rotor/context menu) can
+      // move accessibility focus directly from one element to another within
+      // the *same* view by blurring the old element and focusing the new one
+      // as two separate actions. The browser fires "focusout" for the blur
+      // (with `document.body` typically becoming the active element) before
+      // the "focusin" for the new target arrives.
+      //
+      // Reacting to that intermediate "focusout" immediately would tell the
+      // framework the view was unfocused and then immediately refocused,
+      // which makes it reset focus to the first focusable widget in the view
+      // instead of preserving whatever was actually focused (see
+      // https://github.com/flutter/flutter/issues/168458). Debounce the
+      // "unfocused" notification so a "focusin" landing back inside the same
+      // view shortly afterwards can cancel it.
+      _pendingUnfocus?.cancel();
+      _pendingUnfocus = Timer(const Duration(milliseconds: 150), () {
+        _pendingUnfocus = null;
+        _commitFocusChange(null);
+      });
+      return;
+    }
+
+    _pendingUnfocus?.cancel();
+    _pendingUnfocus = null;
+    _commitFocusChange(viewId);
+  }
+
+  void _commitFocusChange(int? viewId) {
     if (viewId == _lastViewId) {
       return;
     }
