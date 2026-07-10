@@ -2952,6 +2952,9 @@ class TextSelectionGestureDetectorBuilder {
   @protected
   void onDoubleTapDown(TapDragDownDetails details) {
     if (delegate.selectionEnabled) {
+      if (!renderEditable.hasFocus) {
+        editableText.requestKeyboard();
+      }
       renderEditable.selectWord(cause: SelectionChangedCause.doubleTap);
       if (shouldShowSelectionToolbar) {
         editableText.showToolbar();
@@ -3055,6 +3058,9 @@ class TextSelectionGestureDetectorBuilder {
   void onTripleTapDown(TapDragDownDetails details) {
     if (!delegate.selectionEnabled) {
       return;
+    }
+    if (!renderEditable.hasFocus) {
+      editableText.requestKeyboard();
     }
     if (renderEditable.maxLines == 1) {
       editableText.selectAll(SelectionChangedCause.tap);

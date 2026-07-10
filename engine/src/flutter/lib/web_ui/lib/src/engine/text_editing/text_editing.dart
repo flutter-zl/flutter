@@ -34,6 +34,53 @@ bool _debugVisibleTextEditing = false;
 /// Set this to `true` to print when text input commands are scheduled and run.
 bool _debugPrintTextInputCommands = false;
 
+const bool _kIssue188781EngineDebug = true;
+
+void _issue188781EngineLog(String message) {
+  if (_kIssue188781EngineDebug) {
+    final bool shouldLog =
+        message.contains('IOSTextEditingStrategy') ||
+        message.contains('TextInput.') ||
+        message.contains('handleBlur') ||
+        message.contains('disable') ||
+        message.contains('onConnectionClosed') ||
+        message.contains('onFocusReceived');
+    if (!shouldLog) {
+      return;
+    }
+    print('[issue188781][engine] $message');
+  }
+}
+
+String _issue188781EditingStateSummary(EditingState? state) {
+  if (state == null) {
+    return 'null';
+  }
+  return 'textLength=${state.text.length} base=${state.baseOffset} '
+      'extent=${state.extentOffset} composing=${state.composingBaseOffset}-${state.composingExtentOffset}';
+}
+
+String _issue188781DomElementSummary(DomHTMLElement? element) {
+  if (element == null) {
+    return 'element=null';
+  }
+  final isActive = domDocument.activeElement == element;
+  final String selection;
+  if (element.isA<DomHTMLInputElement>()) {
+    final input = element as DomHTMLInputElement;
+    selection =
+        'valueLength=${input.value.length} selection=${input.selectionStart}-${input.selectionEnd}';
+  } else if (element.isA<DomHTMLTextAreaElement>()) {
+    final textArea = element as DomHTMLTextAreaElement;
+    selection =
+        'valueLength=${textArea.value.length} selection=${textArea.selectionStart}-${textArea.selectionEnd}';
+  } else {
+    selection = 'selection=unsupported';
+  }
+  return 'tag=${element.tagName} active=$isActive $selection '
+      'transform=${element.style.transform}';
+}
+
 /// The `keyCode` of the "Enter" key.
 const int _kReturnKeyCode = 13;
 
@@ -1063,6 +1110,10 @@ class EditingState {
   ///
   ///  * [applyTextToDomElement], which is used for non-focused elements.
   void applyToDomElement(DomHTMLElement? domElement) {
+    _issue188781EngineLog(
+      'EditingState.applyToDomElement state=${_issue188781EditingStateSummary(this)} '
+      'before=${_issue188781DomElementSummary(domElement)}',
+    );
     if (domElement != null && domElement.isA<DomHTMLInputElement>()) {
       final element = domElement as DomHTMLInputElement;
       element.value = text;
@@ -1076,6 +1127,9 @@ class EditingState {
         'Unsupported DOM element type: <${domElement?.tagName}> (${domElement.runtimeType})',
       );
     }
+    _issue188781EngineLog(
+      'EditingState.applyToDomElement after=${_issue188781DomElementSummary(domElement)}',
+    );
   }
 
   /// Applies the [text] to the [domElement].
@@ -1445,6 +1499,11 @@ abstract class DefaultTextEditingStrategy
     assert(!isEnabled);
     _pendingBlurConnectionCloseTimer?.cancel();
     _pendingBlurConnectionCloseTimer = null;
+    _issue188781EngineLog(
+      '$runtimeType.initializeTextEditing viewId=${inputConfig.viewId} '
+      'inputType=${inputConfig.inputType.runtimeType} readOnly=${inputConfig.readOnly} '
+      'interactiveSelection=${inputConfig.enableInteractiveSelection}',
+    );
 
     // The -1 tab index value makes this element not reachable by keyboard.
     domElement = inputConfig.inputType.createDomElement()..tabIndex = -1;
@@ -1583,7 +1642,10 @@ abstract class DefaultTextEditingStrategy
     assert(isEnabled);
     _pendingBlurConnectionCloseTimer?.cancel();
     _pendingBlurConnectionCloseTimer = null;
-
+    _issue188781EngineLog(
+      '$runtimeType.disable ${_issue188781DomElementSummary(activeDomElement)} '
+      'lastState=${_issue188781EditingStateSummary(lastEditingState)}',
+    );
     // Preserve the internal scroll position.
     if (geometry != null && lastEditingState != null) {
       final key = '${geometry!.hashCode}_${lastEditingState!.text.hashCode}';
@@ -1617,8 +1679,13 @@ abstract class DefaultTextEditingStrategy
 
   @override
   void setEditingState(EditingState? editingState) {
+    _issue188781EngineLog(
+      '$runtimeType.setEditingState incoming=${_issue188781EditingStateSummary(editingState)} '
+      'isEnabled=$isEnabled before=${_issue188781DomElementSummary(domElement)}',
+    );
     lastEditingState = editingState;
     if (!isEnabled || !editingState!.isValid) {
+      _issue188781EngineLog('$runtimeType.setEditingState ignored');
       return;
     }
     lastEditingState!.applyToDomElement(domElement);
@@ -1636,9 +1703,18 @@ abstract class DefaultTextEditingStrategy
   void handleChange(DomEvent event) {
     assert(isEnabled);
 
+    _issue188781EngineLog(
+      '$runtimeType.handleChange event=${event.type} '
+      'before=${_issue188781DomElementSummary(activeDomElement)} '
+      'lastState=${_issue188781EditingStateSummary(lastEditingState)}',
+    );
     var newEditingState = EditingState.fromDomElement(activeDomElement);
     newEditingState = suppressInteractiveSelectionIfNeeded(newEditingState);
     newEditingState = determineCompositionState(newEditingState);
+    newEditingState = normalizeEditingStateFromDom(newEditingState);
+    _issue188781EngineLog(
+      '$runtimeType.handleChange computed=${_issue188781EditingStateSummary(newEditingState)}',
+    );
 
     TextEditingDeltaState? newTextEditingDeltaState;
     if (inputConfiguration.enableDeltaModel) {
@@ -1654,10 +1730,17 @@ abstract class DefaultTextEditingStrategy
     if (newEditingState != lastEditingState) {
       lastEditingState = newEditingState;
       _editingDeltaState = newTextEditingDeltaState;
+      _issue188781EngineLog('$runtimeType.handleChange sending update to framework');
       onChange!(lastEditingState, _editingDeltaState);
+    } else {
+      _issue188781EngineLog('$runtimeType.handleChange ignored unchanged state');
     }
     // Flush delta state.
     _editingDeltaState = null;
+  }
+
+  EditingState normalizeEditingStateFromDom(EditingState editingState) {
+    return editingState;
   }
 
   EditingState suppressInteractiveSelectionIfNeeded(EditingState editingState) {
@@ -1689,6 +1772,10 @@ abstract class DefaultTextEditingStrategy
     // text update delta.
     final String? eventData = (event['data'] as JSString?)?.toDart;
     final String? inputType = (event['inputType'] as JSString?)?.toDart;
+    _issue188781EngineLog(
+      '$runtimeType.handleBeforeInput inputType=$inputType '
+      'dataLength=${eventData?.length} lastState=${_issue188781EditingStateSummary(lastEditingState)}',
+    );
 
     if (inputType != null) {
       final bool isSelectionInverted =
@@ -1721,6 +1808,10 @@ abstract class DefaultTextEditingStrategy
     event as DomFocusEvent;
 
     final willGainFocusElement = event.relatedTarget as DomElement?;
+    _issue188781EngineLog(
+      '$runtimeType.handleBlur relatedTarget=${willGainFocusElement?.tagName} '
+      'active=${_issue188781DomElementSummary(domElement)}',
+    );
     if (willGainFocusElement == null) {
       // If the element to gain focus is reported as `null`, it means that the
       // window/iframe that Flutter runs in is losing focus. In this case, the
@@ -1795,10 +1886,12 @@ abstract class DefaultTextEditingStrategy
     required OnActionCallback onAction,
   }) {
     assert(!isEnabled);
+    _issue188781EngineLog('$runtimeType.enable start');
 
     initializeTextEditing(inputConfig, onChange: onChange, onAction: onAction);
 
     addEventHandlers();
+    _issue188781EngineLog('$runtimeType.enable handlers added');
 
     if (lastEditingState != null) {
       setEditingState(lastEditingState);
@@ -1806,6 +1899,7 @@ abstract class DefaultTextEditingStrategy
 
     // Re-focuses after setting editing state.
     moveFocusToActiveDomElement();
+    _issue188781EngineLog('$runtimeType.enable completed');
 
     // Restore the internal scroll position.
     if (geometry != null && lastEditingState != null) {
@@ -1856,7 +1950,13 @@ abstract class DefaultTextEditingStrategy
 
   /// Moves the focus to the [activeDomElement].
   void moveFocusToActiveDomElement() {
+    _issue188781EngineLog(
+      '$runtimeType.moveFocusToActiveDomElement before=${_issue188781DomElementSummary(activeDomElement)}',
+    );
     activeDomElement.focusWithoutScroll();
+    _issue188781EngineLog(
+      '$runtimeType.moveFocusToActiveDomElement after=${_issue188781DomElementSummary(activeDomElement)}',
+    );
   }
 }
 
@@ -1889,7 +1989,13 @@ class IOSTextEditingStrategy extends GloballyPositionedTextEditingStrategy {
   /// in iOS is set to correct place, 100ms after focus. We use this timer for
   /// timing this delay.
   Timer? _positionInputElementTimer;
+  Timer? _refocusAfterPointerBlurTimer;
+  Timer? _ignoreZeroSelectionAfterRefocusTimer;
   static const Duration _delayBeforePlacement = Duration(milliseconds: 100);
+  static const Duration _delayBeforeRefocusAfterPointerBlur = Duration(milliseconds: 50);
+  static const Duration _delayBeforeAcceptingZeroSelectionAfterRefocus = Duration(
+    milliseconds: 120,
+  );
 
   /// Whether or not the input element can be positioned at this point in time.
   ///
@@ -1903,6 +2009,9 @@ class IOSTextEditingStrategy extends GloballyPositionedTextEditingStrategy {
   /// * [_delayBeforePlacement] which controls how long to wait before
   ///   positioning the input field.
   bool _canPosition = true;
+  bool _isPointerInteracting = false;
+  bool _ignoreZeroSelectionAfterRefocus = false;
+  EditingState? _lastCollapsedEditingState;
 
   @override
   void initializeTextEditing(
@@ -1910,6 +2019,7 @@ class IOSTextEditingStrategy extends GloballyPositionedTextEditingStrategy {
     required OnChangeCallback onChange,
     required OnActionCallback onAction,
   }) {
+    _issue188781EngineLog('IOSTextEditingStrategy.initializeTextEditing start');
     super.initializeTextEditing(inputConfig, onChange: onChange, onAction: onAction);
     inputConfig.inputType.configureInputMode(activeDomElement);
     if (hasAutofillGroup) {
@@ -1919,12 +2029,20 @@ class IOSTextEditingStrategy extends GloballyPositionedTextEditingStrategy {
 
   @override
   void initializeElementPlacement() {
+    _issue188781EngineLog(
+      'IOSTextEditingStrategy.initializeElementPlacement before=${_issue188781DomElementSummary(activeDomElement)}',
+    );
+
     /// Position the element outside of the page before focusing on it. This is
     /// useful for not triggering a scroll when iOS virtual keyboard is
     /// coming up.
     activeDomElement.style.transform = 'translate(${offScreenOffset}px, ${offScreenOffset}px)';
 
     _canPosition = false;
+    _issue188781EngineLog(
+      'IOSTextEditingStrategy.initializeElementPlacement after canPosition=$_canPosition '
+      '${_issue188781DomElementSummary(activeDomElement)}',
+    );
   }
 
   @override
@@ -1970,12 +2088,19 @@ class IOSTextEditingStrategy extends GloballyPositionedTextEditingStrategy {
         activeDomElement,
         'focus',
         createDomEventListener((DomEvent _) {
+          _cancelRefocusAfterPointerBlur();
+          _issue188781EngineLog(
+            'IOSTextEditingStrategy focus event canPosition=$_canPosition '
+            '${_issue188781DomElementSummary(activeDomElement)}',
+          );
           // Cancel previous timer if exists.
           _schedulePlacement();
+          _restoreLastEditingStateAfterFocus();
         }),
       ),
     );
 
+    _addPointerInteractionListeners();
     _addTapListener();
   }
 
@@ -1989,9 +2114,236 @@ class IOSTextEditingStrategy extends GloballyPositionedTextEditingStrategy {
 
   @override
   void disable() {
+    _cancelRefocusAfterPointerBlur();
+    _cancelIgnoreZeroSelectionAfterRefocus();
+    _isPointerInteracting = false;
+    _lastCollapsedEditingState = null;
+    if (domElement != null && domDocument.activeElement == activeDomElement) {
+      _issue188781EngineLog(
+        'IOSTextEditingStrategy blurring active input before disable '
+        '${_issue188781DomElementSummary(activeDomElement)}',
+      );
+      EnginePlatformDispatcher.instance.viewManager.safeBlur(activeDomElement);
+    }
     super.disable();
     _positionInputElementTimer?.cancel();
     _positionInputElementTimer = null;
+  }
+
+  void _addPointerInteractionListeners() {
+    void handlePointerDown(DomEvent _) {
+      _isPointerInteracting = true;
+      _cancelRefocusAfterPointerBlur();
+      _issue188781EngineLog('IOSTextEditingStrategy pointerdown');
+      _refocusIfNeededOnPointerDown();
+    }
+
+    void handlePointerUp(DomEvent _) {
+      _isPointerInteracting = false;
+      _issue188781EngineLog('IOSTextEditingStrategy pointerup');
+    }
+
+    void handlePointerCancel(DomEvent _) {
+      _isPointerInteracting = false;
+      _issue188781EngineLog('IOSTextEditingStrategy pointercancel');
+      _restoreEditingStateAfterPointerCancel();
+    }
+
+    subscriptions.add(
+      DomSubscription(domDocument, 'pointerdown', createDomEventListener(handlePointerDown)),
+    );
+    subscriptions.add(
+      DomSubscription(domWindow, 'pointerdown', createDomEventListener(handlePointerDown)),
+    );
+    subscriptions.add(
+      DomSubscription(domDocument, 'pointerup', createDomEventListener(handlePointerUp)),
+    );
+    subscriptions.add(
+      DomSubscription(domWindow, 'pointerup', createDomEventListener(handlePointerUp)),
+    );
+    subscriptions.add(
+      DomSubscription(domDocument, 'pointercancel', createDomEventListener(handlePointerCancel)),
+    );
+    subscriptions.add(
+      DomSubscription(domWindow, 'pointercancel', createDomEventListener(handlePointerCancel)),
+    );
+  }
+
+  @override
+  void setEditingState(EditingState? editingState) {
+    super.setEditingState(editingState);
+    _rememberCollapsedEditingState();
+  }
+
+  @override
+  void handleChange(DomEvent event) {
+    super.handleChange(event);
+    _rememberCollapsedEditingState();
+  }
+
+  @override
+  EditingState normalizeEditingStateFromDom(EditingState editingState) {
+    if (!_ignoreZeroSelectionAfterRefocus && !_isPointerInteracting) {
+      return editingState;
+    }
+    final EditingState? previousState = _lastCollapsedEditingState;
+    if (!_isTransientZeroSelection(editingState, previousState)) {
+      return editingState;
+    }
+    _issue188781EngineLog(
+      'IOSTextEditingStrategy ignoring transient zero selection '
+      'state=${_issue188781EditingStateSummary(editingState)} '
+      'previous=${_issue188781EditingStateSummary(previousState)}',
+    );
+    previousState!.applyToDomElement(activeDomElement);
+    return previousState;
+  }
+
+  void _rememberCollapsedEditingState() {
+    final EditingState? state = lastEditingState;
+    if (state == null || state.baseOffset != state.extentOffset) {
+      return;
+    }
+    if (_isTransientZeroSelection(state, _lastCollapsedEditingState)) {
+      return;
+    }
+    _lastCollapsedEditingState = state;
+  }
+
+  bool _isTransientZeroSelection(EditingState state, EditingState? previousState) {
+    return state.text.isNotEmpty &&
+        state.baseOffset == 0 &&
+        state.extentOffset == 0 &&
+        previousState != null &&
+        previousState.text == state.text &&
+        previousState.extentOffset != 0;
+  }
+
+  void _refocusIfNeededOnPointerDown() {
+    if (!isEnabled || domElement == null) {
+      return;
+    }
+    if (domDocument.activeElement == activeDomElement) {
+      return;
+    }
+    _issue188781EngineLog(
+      'IOSTextEditingStrategy refocusing on pointerdown '
+      '${_issue188781DomElementSummary(activeDomElement)}',
+    );
+    _moveFocusAndIgnoreTransientZeroSelection();
+    _restoreLastCollapsedEditingState();
+  }
+
+  void _restoreEditingStateAfterPointerCancel() {
+    if (!isEnabled || domElement == null) {
+      return;
+    }
+    final EditingState? state = lastEditingState ?? _lastCollapsedEditingState;
+    if (state == null || !state.isValid) {
+      return;
+    }
+    if (domDocument.hasFocus() && domDocument.activeElement != activeDomElement) {
+      _moveFocusAndIgnoreTransientZeroSelection();
+    }
+    _issue188781EngineLog(
+      'IOSTextEditingStrategy restoring after pointercancel '
+      'state=${_issue188781EditingStateSummary(state)}',
+    );
+    lastEditingState = state;
+    state.applyToDomElement(activeDomElement);
+  }
+
+  @override
+  void handleBlur(DomEvent event) {
+    event as DomFocusEvent;
+
+    final willGainFocusElement = event.relatedTarget as DomElement?;
+    if (willGainFocusElement != null || !_isPointerInteracting) {
+      super.handleBlur(event);
+      return;
+    }
+
+    _issue188781EngineLog(
+      'IOSTextEditingStrategy deferring pointer blur '
+      '${_issue188781DomElementSummary(activeDomElement)}',
+    );
+    _scheduleRefocusAfterPointerBlur();
+  }
+
+  void _scheduleRefocusAfterPointerBlur() {
+    _refocusAfterPointerBlurTimer?.cancel();
+    if (domDocument.hasFocus() && domElement != null) {
+      _issue188781EngineLog('IOSTextEditingStrategy refocusing during pointer blur');
+      _moveFocusAndIgnoreTransientZeroSelection();
+      _restoreLastCollapsedEditingState();
+    }
+    _refocusAfterPointerBlurTimer = Timer(_delayBeforeRefocusAfterPointerBlur, () {
+      _refocusAfterPointerBlurTimer = null;
+      if (!isEnabled || domElement == null) {
+        _issue188781EngineLog('IOSTextEditingStrategy pointer blur ignored after disable');
+        return;
+      }
+      if (!domDocument.hasFocus()) {
+        _issue188781EngineLog('IOSTextEditingStrategy pointer blur became document blur');
+        textEditing.sendTextConnectionClosedToFrameworkIfAny();
+        return;
+      }
+      if (domDocument.activeElement != activeDomElement) {
+        _issue188781EngineLog('IOSTextEditingStrategy refocusing after pointer blur');
+        _moveFocusAndIgnoreTransientZeroSelection();
+        _restoreLastCollapsedEditingState();
+      }
+    });
+  }
+
+  void _cancelRefocusAfterPointerBlur() {
+    _refocusAfterPointerBlurTimer?.cancel();
+    _refocusAfterPointerBlurTimer = null;
+  }
+
+  void _moveFocusAndIgnoreTransientZeroSelection() {
+    _ignoreZeroSelectionAfterRefocus = true;
+    _ignoreZeroSelectionAfterRefocusTimer?.cancel();
+    moveFocusToActiveDomElement();
+    _ignoreZeroSelectionAfterRefocusTimer = Timer(
+      _delayBeforeAcceptingZeroSelectionAfterRefocus,
+      _cancelIgnoreZeroSelectionAfterRefocus,
+    );
+  }
+
+  void _restoreLastCollapsedEditingState() {
+    final EditingState? state = _lastCollapsedEditingState;
+    if (state == null || !state.isValid) {
+      return;
+    }
+    _issue188781EngineLog(
+      'IOSTextEditingStrategy restoring collapsed state after refocus '
+      'state=${_issue188781EditingStateSummary(state)}',
+    );
+    lastEditingState = state;
+    state.applyToDomElement(activeDomElement);
+  }
+
+  void _restoreLastEditingStateAfterFocus() {
+    EditingState? state = lastEditingState;
+    if (state == null || !state.isValid) {
+      return;
+    }
+    if (_isTransientZeroSelection(state, _lastCollapsedEditingState)) {
+      state = _lastCollapsedEditingState!;
+      lastEditingState = state;
+    }
+    _issue188781EngineLog(
+      'IOSTextEditingStrategy restoring editing state after focus '
+      'state=${_issue188781EditingStateSummary(state)}',
+    );
+    state.applyToDomElement(activeDomElement);
+  }
+
+  void _cancelIgnoreZeroSelectionAfterRefocus() {
+    _ignoreZeroSelectionAfterRefocusTimer?.cancel();
+    _ignoreZeroSelectionAfterRefocusTimer = null;
+    _ignoreZeroSelectionAfterRefocus = false;
   }
 
   /// On iOS long press works differently than a single tap.
@@ -2017,6 +2369,10 @@ class IOSTextEditingStrategy extends GloballyPositionedTextEditingStrategy {
         activeDomElement,
         'click',
         createDomEventListener((DomEvent _) {
+          _issue188781EngineLog(
+            'IOSTextEditingStrategy click event canPosition=$_canPosition '
+            '${_issue188781DomElementSummary(activeDomElement)}',
+          );
           // Check if the element is already positioned. If not this does not fall
           // under `The user was using the long press, now they want to enter text
           // via keyboard` journey.
@@ -2033,18 +2389,34 @@ class IOSTextEditingStrategy extends GloballyPositionedTextEditingStrategy {
   }
 
   void _schedulePlacement() {
+    _issue188781EngineLog(
+      'IOSTextEditingStrategy._schedulePlacement canPosition=$_canPosition '
+      '${_issue188781DomElementSummary(activeDomElement)}',
+    );
     _positionInputElementTimer?.cancel();
     _positionInputElementTimer = Timer(_delayBeforePlacement, () {
       _canPosition = true;
       placeElement();
+      _issue188781EngineLog(
+        'IOSTextEditingStrategy._schedulePlacement fired canPosition=$_canPosition '
+        '${_issue188781DomElementSummary(activeDomElement)}',
+      );
     });
   }
 
   @override
   void placeElement() {
+    _issue188781EngineLog(
+      'IOSTextEditingStrategy.placeElement canPosition=$_canPosition '
+      'before=${_issue188781DomElementSummary(activeDomElement)}',
+    );
     moveFocusToActiveDomElement();
     geometry?.applyToDomElement(activeDomElement);
+    _restoreLastEditingStateAfterFocus();
     scrollIntoViewIfEmbedded();
+    _issue188781EngineLog(
+      'IOSTextEditingStrategy.placeElement after=${_issue188781DomElementSummary(activeDomElement)}',
+    );
   }
 }
 
@@ -2329,6 +2701,7 @@ class TextInputClearClient extends TextInputCommand {
 
   @override
   void run(HybridTextEditing textEditing) {
+    _issue188781EngineLog('TextInput.clearClient isEditing=${textEditing.isEditing}');
     if (textEditing.isEditing) {
       textEditing.stopEditing();
     }
@@ -2341,6 +2714,7 @@ class TextInputHide extends TextInputCommand {
 
   @override
   void run(HybridTextEditing textEditing) {
+    _issue188781EngineLog('TextInput.hide isEditing=${textEditing.isEditing}');
     if (textEditing.isEditing) {
       textEditing.stopEditing();
     }
@@ -2506,6 +2880,10 @@ class TextEditingChannel {
 
   /// Sends the 'TextInputClient.updateEditingState' message to the framework.
   void updateEditingState(int? clientId, EditingState? editingState) {
+    _issue188781EngineLog(
+      'HybridTextEditing.updateEditingState clientId=$clientId '
+      'state=${_issue188781EditingStateSummary(editingState)}',
+    );
     EnginePlatformDispatcher.instance.invokeOnPlatformMessage(
       'flutter/textinput',
       const JSONMethodCodec().encodeMethodCall(
@@ -2520,6 +2898,12 @@ class TextEditingChannel {
 
   /// Sends the 'TextInputClient.updateEditingStateWithDeltas' message to the framework.
   void updateEditingStateWithDelta(int? clientId, TextEditingDeltaState? editingDeltaState) {
+    _issue188781EngineLog(
+      'HybridTextEditing.updateEditingStateWithDelta clientId=$clientId '
+      'base=${editingDeltaState?.baseOffset} extent=${editingDeltaState?.extentOffset} '
+      'delta=${editingDeltaState?.deltaStart}-${editingDeltaState?.deltaEnd} '
+      'textLength=${editingDeltaState?.deltaText.length}',
+    );
     EnginePlatformDispatcher.instance.invokeOnPlatformMessage(
       'flutter/textinput',
       const JSONMethodCodec().encodeMethodCall(
@@ -2545,6 +2929,7 @@ class TextEditingChannel {
 
   /// Sends the 'TextInputClient.onConnectionClosed' message to the framework.
   void onConnectionClosed(int? clientId) {
+    _issue188781EngineLog('HybridTextEditing.onConnectionClosed clientId=$clientId');
     EnginePlatformDispatcher.instance.invokeOnPlatformMessage(
       'flutter/textinput',
       const JSONMethodCodec().encodeMethodCall(
@@ -2556,6 +2941,7 @@ class TextEditingChannel {
 
   /// Sends the 'TextInputClient.onFocusReceived' message to the framework.
   void onFocusReceived(int? clientId) {
+    _issue188781EngineLog('HybridTextEditing.onFocusReceived clientId=$clientId');
     EnginePlatformDispatcher.instance.invokeOnPlatformMessage(
       'flutter/textinput',
       const JSONMethodCodec().encodeMethodCall(
