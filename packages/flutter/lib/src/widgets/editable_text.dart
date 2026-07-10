@@ -86,6 +86,31 @@ export 'package:flutter/services.dart'
 typedef SelectionChangedCallback =
     void Function(TextSelection selection, SelectionChangedCause? cause);
 
+const bool _kIssue188781FrameworkDebug = true;
+
+void _issue188781FrameworkLog(String message) {
+  if (_kIssue188781FrameworkDebug) {
+    final bool shouldLog =
+        message.startsWith('_handleFocusChanged') ||
+        message.startsWith('_openOrCloseInputConnectionIfNeeded') ||
+        message.startsWith('_closeInputConnectionIfNeeded') ||
+        message.startsWith('_openInputConnection attached') ||
+        message.startsWith('_openInputConnection aborted') ||
+        message.startsWith('connectionClosed') ||
+        message.contains('hasInputConnection=false') ||
+        message.contains('TextSelection.collapsed(offset: 0') ||
+        message.contains('TextSelection(baseOffset: 0');
+    if (!shouldLog) {
+      return;
+    }
+    debugPrint('[issue188781][framework] $message');
+  }
+}
+
+String _issue188781ValueSummary(TextEditingValue value) {
+  return 'textLength=${value.text.length} selection=${value.selection} composing=${value.composing}';
+}
+
 /// Signature for the callback that reports the app private command results.
 typedef AppPrivateCommandCallback = void Function(String action, Map<String, dynamic> data);
 
@@ -3597,6 +3622,11 @@ class EditableTextState extends State<EditableText>
 
   @override
   void updateEditingValue(TextEditingValue value) {
+    _issue188781FrameworkLog(
+      'updateEditingValue incoming ${_issue188781ValueSummary(value)} '
+      'current=${_issue188781ValueSummary(_value)} hasFocus=$_hasFocus '
+      'hasInputConnection=$_hasInputConnection shouldCreate=$_shouldCreateInputConnection',
+    );
     // This method handles text editing state updates from the platform text
     // input plugin. The [EditableText] may not have the focus or an open input
     // connection, as autofill can update a disconnected [EditableText].
@@ -3604,6 +3634,7 @@ class EditableTextState extends State<EditableText>
     // Since we still have to support keyboard select, this is the best place
     // to disable text updating.
     if (!_shouldCreateInputConnection) {
+      _issue188781FrameworkLog('updateEditingValue ignored because input connection is disabled');
       return;
     }
 
@@ -3624,10 +3655,12 @@ class EditableTextState extends State<EditableText>
       // This is possible, for example, when the numeric keyboard is input,
       // the engine will notify twice for the same value.
       // Track at https://github.com/flutter/flutter/issues/65811
+      _issue188781FrameworkLog('updateEditingValue ignored duplicate value');
       return;
     }
 
     if (value.text == _value.text && value.composing == _value.composing) {
+      _issue188781FrameworkLog('updateEditingValue selection-only update ${value.selection}');
       // `selection` is the only change.
       SelectionChangedCause cause;
       if (_textInputConnection?.scribbleInProgress ?? false) {
@@ -3640,6 +3673,7 @@ class EditableTextState extends State<EditableText>
       }
       _handleSelectionChanged(value.selection, cause);
     } else {
+      _issue188781FrameworkLog('updateEditingValue text or composing changed');
       if (value.text != _value.text) {
         // Hide the toolbar if the text was changed, but only hide the toolbar
         // overlay; the selection handle's visibility will be handled
@@ -4049,7 +4083,12 @@ class EditableTextState extends State<EditableText>
   // Must be called after layout.
   // See https://github.com/flutter/flutter/issues/126312
   void _openInputConnection() {
+    _issue188781FrameworkLog(
+      '_openInputConnection enter hasFocus=$_hasFocus hasInputConnection=$_hasInputConnection '
+      'shouldCreate=$_shouldCreateInputConnection value=${_issue188781ValueSummary(_value)}',
+    );
     if (!_shouldCreateInputConnection) {
+      _issue188781FrameworkLog('_openInputConnection aborted because shouldCreate is false');
       return;
     }
     if (!_hasInputConnection) {
@@ -4078,13 +4117,16 @@ class EditableTextState extends State<EditableText>
         _textInputConnection!.requestAutofill();
       }
       _lastKnownRemoteTextEditingValue = localValue;
+      _issue188781FrameworkLog('_openInputConnection attached and showed keyboard');
     } else {
       _textInputConnection!.show();
+      _issue188781FrameworkLog('_openInputConnection reused existing connection and called show');
     }
   }
 
   void _closeInputConnectionIfNeeded() {
     if (_hasInputConnection) {
+      _issue188781FrameworkLog('_closeInputConnectionIfNeeded closing connection');
       _textInputConnection!.close();
       _textInputConnection = null;
       _lastKnownRemoteTextEditingValue = null;
@@ -4094,7 +4136,12 @@ class EditableTextState extends State<EditableText>
   }
 
   void _openOrCloseInputConnectionIfNeeded() {
+    _issue188781FrameworkLog(
+      '_openOrCloseInputConnectionIfNeeded hasFocus=$_hasFocus '
+      'hasInputConnection=$_hasInputConnection',
+    );
     if (_hasFocus && widget.focusNode.consumeKeyboardToken()) {
+      _issue188781FrameworkLog('_openOrCloseInputConnectionIfNeeded consumed keyboard token');
       _openInputConnection();
     } else if (!_hasFocus) {
       _closeInputConnectionIfNeeded();
@@ -4190,6 +4237,9 @@ class EditableTextState extends State<EditableText>
   /// focus, the control will then attach to the keyboard and request that the
   /// keyboard become visible.
   void requestKeyboard() {
+    _issue188781FrameworkLog(
+      'requestKeyboard hasFocus=$_hasFocus hasInputConnection=$_hasInputConnection',
+    );
     if (_hasFocus) {
       _openInputConnection();
     } else {
@@ -4438,11 +4488,16 @@ class EditableTextState extends State<EditableText>
 
   @pragma('vm:notify-debugger-on-exception')
   void _handleSelectionChanged(TextSelection selection, SelectionChangedCause? cause) {
+    _issue188781FrameworkLog(
+      '_handleSelectionChanged selection=$selection cause=$cause '
+      'hasFocus=$_hasFocus hasInputConnection=$_hasInputConnection',
+    );
     // We return early if the selection is not valid. This can happen when the
     // text of [EditableText] is updated at the same time as the selection is
     // changed by a gesture event.
     final String text = widget.controller.value.text;
     if (text.length < selection.end || text.length < selection.start) {
+      _issue188781FrameworkLog('_handleSelectionChanged ignored invalid selection');
       return;
     }
 
@@ -4654,6 +4709,11 @@ class EditableTextState extends State<EditableText>
     final textChanged = oldValue.text != value.text;
     final bool textCommitted = !oldValue.composing.isCollapsed && value.composing.isCollapsed;
     final selectionChanged = oldValue.selection != value.selection;
+    _issue188781FrameworkLog(
+      '_formatAndSetValue cause=$cause userInteraction=$userInteraction '
+      'textChanged=$textChanged selectionChanged=$selectionChanged '
+      'old=${_issue188781ValueSummary(oldValue)} new=${_issue188781ValueSummary(value)}',
+    );
 
     if (textChanged || textCommitted) {
       // Only apply input formatters if the text has changed (including uncommitted
@@ -4882,6 +4942,10 @@ class EditableTextState extends State<EditableText>
   }
 
   void _handleFocusChanged() {
+    _issue188781FrameworkLog(
+      '_handleFocusChanged hasFocus=$_hasFocus hasInputConnection=$_hasInputConnection '
+      'selection=${_value.selection}',
+    );
     _openOrCloseInputConnectionIfNeeded();
     _startOrStopCursorTimerIfNeeded();
     _updateOrDisposeSelectionOverlayIfNeeded();
