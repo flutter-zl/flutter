@@ -6,6 +6,7 @@ import 'package:test/bootstrap/browser.dart';
 import 'package:test/test.dart';
 import 'package:ui/src/engine.dart';
 import 'package:ui/ui.dart' as ui;
+import 'package:ui/ui_web/src/ui_web.dart' as ui_web;
 
 void main() {
   internalBootstrapBrowserTest(() => testMain);
@@ -24,6 +25,8 @@ void testMain() {
 
     tearDown(() {
       EngineSemantics.instance.semanticsEnabled = false;
+      ui_web.browser.debugBrowserEngineOverride = null;
+      ViewFocusBinding.debugDocumentHasFocusOverride = null;
     });
 
     test('The view is focusable and reachable by keyboard when registered', () async {
@@ -267,6 +270,65 @@ void testMain() {
       expect(dispatchedViewFocusEvents[0].viewId, view.viewId);
       expect(dispatchedViewFocusEvents[0].state, ui.ViewFocusState.focused);
       expect(dispatchedViewFocusEvents[0].direction, ui.ViewFocusDirection.forward);
+    });
+
+    // On Safari the window losing focus produces no focusout at all, and
+    // leaving an iframe produces one with activeElement back on <body />. In
+    // every case measured, a focusout that arrives while the document is
+    // unfocused and some element is still active is the tail of an in-page
+    // focus change, so it must not be reported as an unfocus.
+    // Regression test for https://github.com/flutter/flutter/issues/190367.
+    test('ignores focus changed in the middle of a blur call while the document is unfocused', () {
+      ui_web.browser.debugBrowserEngineOverride = ui_web.BrowserEngine.webkit;
+      ViewFocusBinding.debugDocumentHasFocusOverride = false;
+
+      final DomElement input1 = createDomElement('input');
+      final DomElement input2 = createDomElement('input');
+      final EngineFlutterView view = createAndRegisterView(dispatcher);
+      final DomEventListener focusInput1Listener = createDomEventListener((DomEvent event) {
+        input1.focusWithoutScroll();
+      });
+
+      view.dom.rootElement.append(input1);
+      view.dom.rootElement.append(input2);
+
+      input1.addEventListener('blur', focusInput1Listener);
+      input1.focusWithoutScroll();
+      // The event handler above should move the focus back to input1.
+      input2.focusWithoutScroll();
+      input1.removeEventListener('blur', focusInput1Listener);
+
+      expect(dispatchedViewFocusEvents, hasLength(1));
+
+      expect(dispatchedViewFocusEvents[0].viewId, view.viewId);
+      expect(dispatchedViewFocusEvents[0].state, ui.ViewFocusState.focused);
+      expect(dispatchedViewFocusEvents[0].direction, ui.ViewFocusDirection.forward);
+    });
+
+    // Chromium fires a focusout on the focused element when the window itself
+    // loses focus, leaving that element as the activeElement and reporting no
+    // document focus. That focusout is the only signal the view has to go
+    // unfocused there, so the document focus check has to stay off Safari.
+    test('reports an unfocus on Chromium when the window loses focus', () {
+      ui_web.browser.debugBrowserEngineOverride = ui_web.BrowserEngine.blink;
+
+      final DomElement input = createDomElement('input');
+      final EngineFlutterView view = createAndRegisterView(dispatcher);
+
+      view.dom.rootElement.append(input);
+      input.focusWithoutScroll();
+
+      expect(dispatchedViewFocusEvents, hasLength(1));
+
+      // Replay what Chromium delivers on window blur: the input keeps being the
+      // activeElement, but the document no longer has focus.
+      ViewFocusBinding.debugDocumentHasFocusOverride = false;
+      input.dispatchEvent(createDomEvent('Event', 'focusout'));
+
+      expect(dispatchedViewFocusEvents, hasLength(2));
+
+      expect(dispatchedViewFocusEvents[1].viewId, view.viewId);
+      expect(dispatchedViewFocusEvents[1].state, ui.ViewFocusState.unfocused);
     });
   });
 }

@@ -5,12 +5,17 @@
 import 'dart:async';
 import 'dart:js_interop';
 
+import 'package:meta/meta.dart';
 import 'package:ui/src/engine.dart';
 import 'package:ui/ui.dart' as ui;
 
 /// Tracks the [FlutterView]s focus changes.
 final class ViewFocusBinding {
   ViewFocusBinding(this._viewManager, this._onViewFocusChange);
+
+  /// Overrides the result of [domDocument.hasFocus] for testing.
+  @visibleForTesting
+  static bool? debugDocumentHasFocusOverride;
 
   final FlutterViewManager _viewManager;
   final ui.ViewFocusChangeCallback _onViewFocusChange;
@@ -63,8 +68,18 @@ final class ViewFocusBinding {
     // We leverage this behavior to ignore focusout events where the document has focus but activeElement is not <body />.
     //
     // Refer to https://github.com/flutter/engine/pull/54965 for more info.
+    //
+    // The document focus check is only meaningful on browsers that fire a
+    // focusout on the focused element when the window itself loses focus, as
+    // Chromium does, reporting no document focus by then. Safari fires no
+    // focusout at all in that case, so there the check can only misfire: it
+    // turns an in-page focus change that happens while the window sits in the
+    // background into a spurious unfocus event. Leaving a Safari iframe does
+    // fire a focusout, but with activeElement back on <body />, so the
+    // activeElement check below still lets that unfocus through.
+    // See https://github.com/flutter/flutter/issues/190367.
     final bool wasFocusInvoked =
-        domDocument.hasFocus() && domDocument.activeElement != domDocument.body;
+        (isSafari || _documentHasFocus) && domDocument.activeElement != domDocument.body;
     if (wasFocusInvoked) {
       return;
     }
@@ -85,6 +100,8 @@ final class ViewFocusBinding {
   late final DomEventListener _handleKeyUp = createDomEventListener((DomEvent event) {
     _viewFocusDirection = ui.ViewFocusDirection.forward;
   });
+
+  bool get _documentHasFocus => debugDocumentHasFocusOverride ?? domDocument.hasFocus();
 
   void _handleFocusChange(DomElement? focusedElement) {
     final int? viewId = _viewId(focusedElement);
