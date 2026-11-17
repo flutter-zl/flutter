@@ -581,6 +581,20 @@ class SemanticTextField extends SemanticRole {
         default:
       }
     }
+    _updateAutofillHint(input);
+  }
+
+  /// Declares the field's purpose from the autofill hints carried by
+  /// semantics, so the hint is exposed before the field is ever focused.
+  ///
+  /// Once an autofill group or a text input connection applies its own hint,
+  /// [_isAutofillOwned] is true and that hint is kept.
+  void _updateAutofillHint(DomHTMLInputElement input) {
+    final List<String>? hints = semanticsObject.autofillHints;
+    if (hints == null || hints.isEmpty || _isAutofillOwned) {
+      return;
+    }
+    input.autocomplete = BrowserAutofillHints.instance.flutterToEngine(hints.first);
   }
 
   @override
