@@ -6,8 +6,10 @@
 library;
 
 import 'dart:async';
+import 'dart:ui' show Tristate;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,6 +56,55 @@ void main() {
     User(name: 'Bob', email: 'bob@example.com'),
     User(name: 'Charlie', email: 'charlie123@gmail.com'),
   ];
+
+  testWidgets('field is a combo box that reports whether the options view is showing', (
+    WidgetTester tester,
+  ) async {
+    late FocusNode focusNode;
+    await tester.pumpWidget(
+      TestWidgetsApp(
+        home: RawAutocomplete<String>(
+          optionsBuilder: (TextEditingValue textEditingValue) {
+            return kOptions.where((String option) {
+              return option.contains(textEditingValue.text.toLowerCase());
+            });
+          },
+          fieldViewBuilder:
+              (
+                BuildContext context,
+                TextEditingController fieldTextEditingController,
+                FocusNode fieldFocusNode,
+                VoidCallback onFieldSubmitted,
+              ) {
+                focusNode = fieldFocusNode;
+                return TestTextField(focusNode: focusNode, controller: fieldTextEditingController);
+              },
+          optionsViewBuilder:
+              (
+                BuildContext context,
+                AutocompleteOnSelected<String> onSelected,
+                Iterable<String> options,
+              ) {
+                return const SizedBox(height: 100.0);
+              },
+        ),
+      ),
+    );
+
+    SemanticsData fieldData() => tester.getSemantics(find.byType(EditableText)).getSemanticsData();
+
+    expect(fieldData().role, SemanticsRole.comboBox);
+    expect(fieldData().flagsCollection.isTextField, isTrue);
+    expect(fieldData().flagsCollection.isExpanded, Tristate.isFalse);
+
+    focusNode.requestFocus();
+    await tester.pump();
+    expect(fieldData().flagsCollection.isExpanded, Tristate.isTrue);
+
+    focusNode.unfocus();
+    await tester.pumpAndSettle();
+    expect(fieldData().flagsCollection.isExpanded, Tristate.isFalse);
+  });
 
   testWidgets('can filter and select a list of string options', (WidgetTester tester) async {
     final GlobalKey fieldKey = GlobalKey();

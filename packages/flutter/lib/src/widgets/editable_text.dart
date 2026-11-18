@@ -5911,6 +5911,7 @@ class EditableTextState extends State<EditableText>
       default:
         inputType = ui.SemanticsInputType.text;
     }
+    final ComboBoxTextFieldScope? comboBox = ComboBoxTextFieldScope.maybeOf(context);
 
     return _CompositionCallback(
       compositeCallback: _compositeCallback,
@@ -6059,6 +6060,7 @@ class EditableTextState extends State<EditableText>
                                     textWidthBasis: widget.textWidthBasis,
                                     obscuringCharacter: widget.obscuringCharacter,
                                     obscureText: widget.obscureText,
+                                    comboBoxExpanded: comboBox?.expanded,
                                     offset: offset,
                                     rendererIgnoresPointer: widget.rendererIgnoresPointer,
                                     cursorWidth: widget.cursorWidth,
@@ -6196,6 +6198,7 @@ class _Editable extends MultiChildRenderObjectWidget {
     this.locale,
     required this.obscuringCharacter,
     required this.obscureText,
+    this.comboBoxExpanded,
     required this.offset,
     this.rendererIgnoresPointer = false,
     required this.cursorWidth,
@@ -6236,6 +6239,7 @@ class _Editable extends MultiChildRenderObjectWidget {
   final Locale? locale;
   final String obscuringCharacter;
   final bool obscureText;
+  final bool? comboBoxExpanded;
   final TextHeightBehavior? textHeightBehavior;
   final TextWidthBasis textWidthBasis;
   final ViewportOffset offset;
@@ -6290,6 +6294,7 @@ class _Editable extends MultiChildRenderObjectWidget {
       ignorePointer: rendererIgnoresPointer,
       obscuringCharacter: obscuringCharacter,
       obscureText: obscureText,
+      comboBoxExpanded: comboBoxExpanded,
       textHeightBehavior: textHeightBehavior,
       textWidthBasis: textWidthBasis,
       cursorWidth: cursorWidth,
@@ -6336,6 +6341,7 @@ class _Editable extends MultiChildRenderObjectWidget {
       ..textWidthBasis = textWidthBasis
       ..obscuringCharacter = obscuringCharacter
       ..obscureText = obscureText
+      ..comboBoxExpanded = comboBoxExpanded
       ..cursorWidth = cursorWidth
       ..cursorHeight = cursorHeight
       ..cursorRadius = cursorRadius
@@ -7042,4 +7048,29 @@ class _OverridingTextStyleTextSpanUtils {
       spellOut: textSpan.spellOut,
     );
   }
+}
+
+/// Marks the [EditableText] widgets below it as the text input of a combo box,
+/// for assistive technologies.
+///
+/// A combo box is a text field that opens a popup, such as a list of options.
+/// [RawAutocomplete] places one around the field built by its
+/// [RawAutocomplete.fieldViewBuilder]. [EditableText] reads it and gives its
+/// semantics node the [SemanticsRole.comboBox] role and an expanded state.
+class ComboBoxTextFieldScope extends InheritedWidget {
+  /// Creates a scope that marks the [EditableText] widgets in [child] as the
+  /// text input of a combo box.
+  const ComboBoxTextFieldScope({super.key, required this.expanded, required super.child});
+
+  /// Whether the combo box's popup is showing.
+  final bool expanded;
+
+  /// The closest instance of this class that encloses the given context, if
+  /// any.
+  static ComboBoxTextFieldScope? maybeOf(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<ComboBoxTextFieldScope>();
+  }
+
+  @override
+  bool updateShouldNotify(ComboBoxTextFieldScope oldWidget) => expanded != oldWidget.expanded;
 }

@@ -2329,11 +2329,17 @@ class SemanticsObject {
         return EngineSemanticsRole.progressBar;
       case ui.SemanticsRole.slider:
         return EngineSemanticsRole.slider;
+      case ui.SemanticsRole.comboBox:
+        // An editable combo box is a text field whose input carries the
+        // combobox role, see [SemanticTextField]. Other combo boxes are not
+        // supported yet and fall back to checking semantics properties.
+        if (isTextField) {
+          return EngineSemanticsRole.textField;
+        }
       // TODO(chunhtai): implement these roles.
       // https://github.com/flutter/flutter/issues/159741.
       case ui.SemanticsRole.dragHandle:
       case ui.SemanticsRole.spinButton:
-      case ui.SemanticsRole.comboBox:
       case ui.SemanticsRole.tooltip:
       case ui.SemanticsRole.hotKey:
       case ui.SemanticsRole.none:

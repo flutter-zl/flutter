@@ -483,6 +483,8 @@ class SemanticTextField extends SemanticRole {
 
     _updateInputType();
 
+    _updateComboBox();
+
     _updateValue();
   }
 
@@ -528,6 +530,20 @@ class SemanticTextField extends SemanticRole {
     } else {
       editableElement.removeAttribute('aria-description');
     }
+  }
+
+  /// Exposes an editable combo box, such as an autocomplete field, on
+  /// [editableElement], the element assistive technologies focus and read,
+  /// rather than on the host element.
+  void _updateComboBox() {
+    if (semanticsObject.role != ui.SemanticsRole.comboBox) {
+      editableElement.removeAttribute('role');
+      editableElement.removeAttribute('aria-expanded');
+      return;
+    }
+    editableElement
+      ..setAttribute('role', 'combobox')
+      ..setAttribute('aria-expanded', semanticsObject.isExpanded);
   }
 
   void _updateEnabledState() {

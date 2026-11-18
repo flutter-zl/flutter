@@ -313,6 +313,7 @@ class RenderEditable extends RenderBox
     TextWidthBasis textWidthBasis = TextWidthBasis.parent,
     String obscuringCharacter = '•',
     this._obscureText = false,
+    this._comboBoxExpanded,
     Locale? locale,
     double cursorWidth = 1.0,
     double? cursorHeight,
@@ -583,6 +584,23 @@ class RenderEditable extends RenderBox
     }
     _obscureText = value;
     _cachedAttributedValue = null;
+    markNeedsSemanticsUpdate();
+  }
+
+  /// Whether the combo box this text field is the input of is expanded, or
+  /// null if this text field is not the input of a combo box.
+  ///
+  /// When non-null, the semantics node gets the [SemanticsRole.comboBox] role
+  /// and this expanded state. It is set on the text field's own configuration,
+  /// because a role from an ancestor [Semantics] widget cannot share a node
+  /// with a text field.
+  bool? get comboBoxExpanded => _comboBoxExpanded;
+  bool? _comboBoxExpanded;
+  set comboBoxExpanded(bool? value) {
+    if (_comboBoxExpanded == value) {
+      return;
+    }
+    _comboBoxExpanded = value;
     markNeedsSemanticsUpdate();
   }
 
@@ -1375,6 +1393,13 @@ class RenderEditable extends RenderBox
       // This is the default for customer that uses RenderEditable directly.
       // The real value is typically set by EditableText.
       ..inputType = ui.SemanticsInputType.text;
+
+    final bool? comboBoxExpanded = this.comboBoxExpanded;
+    if (comboBoxExpanded != null) {
+      config
+        ..role = SemanticsRole.comboBox
+        ..isExpanded = comboBoxExpanded;
+    }
 
     if (hasFocus && selectionEnabled) {
       config.onSetSelection = _handleSetSelection;

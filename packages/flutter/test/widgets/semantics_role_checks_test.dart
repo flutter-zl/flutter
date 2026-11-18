@@ -562,6 +562,82 @@ void main() {
     });
   });
 
+  group('comboBox', () {
+    testWidgets('failure case, not a text field', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Semantics(
+            role: SemanticsRole.comboBox,
+            expanded: false,
+            child: const ExcludeSemantics(child: Text('fruit')),
+          ),
+        ),
+      );
+      final Object? exception = tester.takeException();
+      expect(exception, isFlutterError);
+      final error = exception! as FlutterError;
+      expect(error.message, 'A combo box must be a text field');
+    });
+
+    testWidgets('failure case, no expanded state', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Semantics(
+            role: SemanticsRole.comboBox,
+            textField: true,
+            child: const ExcludeSemantics(child: Text('fruit')),
+          ),
+        ),
+      );
+      final Object? exception = tester.takeException();
+      expect(exception, isFlutterError);
+      final error = exception! as FlutterError;
+      expect(error.message, 'A combo box must have an expanded state');
+    });
+
+    testWidgets('Success case with an EditableText in a ComboBoxTextFieldScope', (
+      WidgetTester tester,
+    ) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Semantics(
+            container: true,
+            child: ComboBoxTextFieldScope(
+              expanded: false,
+              child: EditableText(
+                controller: controller,
+                focusNode: focusNode,
+                style: const TextStyle(),
+                cursorColor: const Color(0xFF000000),
+                backgroundCursorColor: const Color(0xFF000000),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getSemantics(find.byType(EditableText)).getSemanticsData().role,
+        SemanticsRole.comboBox,
+      );
+      expect(
+        tester
+            .getSemantics(find.byType(EditableText))
+            .getSemanticsData()
+            .flagsCollection
+            .isTextField,
+        isTrue,
+      );
+    });
+  });
+
   group('menuItemCheckbox', () {
     testWidgets('failure case, no checked flag', (WidgetTester tester) async {
       await tester.pumpWidget(

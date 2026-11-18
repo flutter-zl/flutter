@@ -193,11 +193,11 @@ sealed class _DebugSemanticsRoleChecks {
       SemanticsRole.loadingSpinner => _noCheckRequired,
       SemanticsRole.progressBar => _semanticsProgressBar,
       SemanticsRole.slider => _semanticsSlider,
+      SemanticsRole.comboBox => _semanticsComboBox,
       // TODO(chunhtai): add checks when the roles are used in framework.
       // https://github.com/flutter/flutter/issues/159741.
       SemanticsRole.dragHandle => _unimplemented,
       SemanticsRole.spinButton => _unimplemented,
-      SemanticsRole.comboBox => _unimplemented,
       SemanticsRole.tooltip => _unimplemented,
       SemanticsRole.hotKey => _unimplemented,
     }(node);
@@ -313,6 +313,17 @@ sealed class _DebugSemanticsRoleChecks {
         'Slider value, minValue, and maxValue must be valid numbers. '
         'value: "${data.value}", minValue: "${data.minValue}", maxValue: "${data.maxValue}"',
       );
+    }
+    return null;
+  }
+
+  static FlutterError? _semanticsComboBox(SemanticsNode node) {
+    final SemanticsData data = node.getSemanticsData();
+    if (!data.flagsCollection.isTextField) {
+      return FlutterError('A combo box must be a text field');
+    }
+    if (data.flagsCollection.isExpanded == Tristate.none) {
+      return FlutterError('A combo box must have an expanded state');
     }
     return null;
   }

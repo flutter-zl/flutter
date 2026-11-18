@@ -446,9 +446,26 @@ class _RawAutocompleteState<T extends Object> extends State<RawAutocomplete<T>> 
   /// option to display; otherwise hides the options view.
   void _updateOptionsViewVisibility() {
     if (_canShowOptionsView) {
+      _showOptionsView();
+    } else {
+      _hideOptionsView();
+    }
+  }
+
+  // The field's semantics report whether the options view is showing, so
+  // opening or closing it rebuilds this widget. Calling show while already
+  // showing still rebuilds the options view with the latest options.
+  void _showOptionsView() {
+    if (_optionsViewController.isShowing) {
       _optionsViewController.show();
-    } else if (_optionsViewController.isShowing) {
-      _optionsViewController.hide();
+    } else {
+      setState(_optionsViewController.show);
+    }
+  }
+
+  void _hideOptionsView() {
+    if (_optionsViewController.isShowing) {
+      setState(_optionsViewController.hide);
     }
   }
 
@@ -541,9 +558,7 @@ class _RawAutocompleteState<T extends Object> extends State<RawAutocomplete<T>> 
     );
     _lastFieldText = selectionString;
     widget.onSelected?.call(nextSelection);
-    if (_optionsViewController.isShowing) {
-      _optionsViewController.hide(); // Close the options view after a selection is made.
-    }
+    _hideOptionsView(); // Close the options view after a selection is made.
     _selecting = false;
   }
 
@@ -584,7 +599,7 @@ class _RawAutocompleteState<T extends Object> extends State<RawAutocomplete<T>> 
 
   Object? _hideOptions(DismissIntent intent) {
     if (_optionsViewController.isShowing) {
-      _optionsViewController.hide();
+      _hideOptionsView();
       return null;
     } else {
       return Actions.invoke(context, intent);
@@ -722,15 +737,18 @@ class _RawAutocompleteState<T extends Object> extends State<RawAutocomplete<T>> 
 
   @override
   Widget build(BuildContext context) {
-    final Widget fieldView =
-        widget.fieldViewBuilder?.call(
-          context,
-          _textEditingController,
-          _focusNode,
-          _onFieldSubmitted,
-        ) ??
+    final Widget? field = widget.fieldViewBuilder?.call(
+      context,
+      _textEditingController,
+      _focusNode,
+      _onFieldSubmitted,
+    );
+    final Widget fieldView = field == null
         // Horizontally expand to make sure the options view's width won't be zero.
-        const SizedBox(width: double.infinity, height: 0.0);
+        ? const SizedBox(width: double.infinity, height: 0.0)
+        // The field opens a list of options, so assistive technologies should
+        // treat it as a combo box that is expanded while the options show.
+        : ComboBoxTextFieldScope(expanded: _optionsViewController.isShowing, child: field);
     return OverlayPortal.overlayChildLayoutBuilder(
       controller: _optionsViewController,
       overlayChildBuilder: _buildOptionsView,

@@ -146,6 +146,28 @@ void testMain() {
       expect(inputElement.autocomplete, 'email');
     });
 
+    // An editable combo box exposes its role and expanded state on the input,
+    // the element assistive technologies focus and read (WCAG 4.1.2).
+    test('combo box text field puts the combobox role on its input', () {
+      final SemanticsObject node = createTextFieldSemantics(
+        value: '',
+        role: ui.SemanticsRole.comboBox,
+        isExpanded: false,
+      );
+      final textFieldRole = node.semanticRole! as SemanticTextField;
+      final DomHTMLElement input = textFieldRole.editableElement;
+      expect(input.getAttribute('role'), 'combobox');
+      expect(input.getAttribute('aria-expanded'), 'false');
+      expect(textFieldRole.element.getAttribute('role'), isNull);
+
+      createTextFieldSemantics(value: 'a', role: ui.SemanticsRole.comboBox, isExpanded: true);
+      expect(input.getAttribute('aria-expanded'), 'true');
+
+      createTextFieldSemantics(value: 'a');
+      expect(input.getAttribute('role'), isNull);
+      expect(input.getAttribute('aria-expanded'), isNull);
+    });
+
     test('renders a disabled text field', () {
       createTextFieldSemantics(isEnabled: false, value: 'hello');
       expectSemanticsTree(owner(), '''<sem><input /></sem>''');
@@ -1244,6 +1266,8 @@ SemanticsObject createTextFieldSemantics({
   int textSelectionBase = 0,
   int textSelectionExtent = 0,
   ui.SemanticsInputType inputType = ui.SemanticsInputType.text,
+  ui.SemanticsRole role = ui.SemanticsRole.none,
+  bool? isExpanded,
 }) {
   final tester = SemanticsTester(owner());
   tester.updateNode(
@@ -1251,6 +1275,7 @@ SemanticsObject createTextFieldSemantics({
     label: label,
     hint: hint,
     value: value,
+    role: role,
     flags: ui.SemanticsFlags(
       isEnabled: isEnabled ? ui.Tristate.isTrue : ui.Tristate.none,
       isTextField: true,
@@ -1260,6 +1285,9 @@ SemanticsObject createTextFieldSemantics({
       isRequired: isRequired == null
           ? ui.Tristate.none
           : (isRequired ? ui.Tristate.isTrue : ui.Tristate.isFalse),
+      isExpanded: isExpanded == null
+          ? ui.Tristate.none
+          : (isExpanded ? ui.Tristate.isTrue : ui.Tristate.isFalse),
     ),
     hasTap: true,
     rect: rect,
